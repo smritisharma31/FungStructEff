@@ -1,8 +1,8 @@
-# StructEff 🔬
+# FungStructEff 🔬
 
 **A Hybrid Contrastive Learning Framework for Fungal Effector Prediction**
 
-StructEff predicts fungal effector proteins from protein sequences using a hybrid deep learning pipeline. Input sequences are first folded into 3D PDB structures using ESMFold, from which **35 structural and physicochemical features are manually computed** from the PDB structures (phi/psi torsion angles, RSA, contact maps, graph topology, betweenness centrality, pLDDT, cysteine content, secondary structure fractions, etc.). Sequences are additionally used for **MMseqs2-based conservation features** (entropy, pct_conserved) and **ESM2-650M sequence embeddings** (1280-dim). All features are combined and trained via a **dynamic hard negative contrastive Siamese network** followed by XGBoost classification.
+FungStructEff predicts fungal effector proteins from protein sequences using a hybrid deep learning pipeline. Input sequences are first folded into 3D PDB structures using ESMFold, from which **35 structural and physicochemical features are manually computed** from the PDB structures (phi/psi torsion angles, RSA, contact maps, graph topology, betweenness centrality, pLDDT, cysteine content, secondary structure fractions, etc.). Sequences are additionally used for **MMseqs2-based conservation features** (entropy, pct_conserved) and **ESM2-650M sequence embeddings** (1280-dim). All features are combined and trained via a **dynamic hard negative contrastive Siamese network** followed by XGBoost classification.
 
 ---
 
@@ -12,16 +12,16 @@ Benchmarked on an independent dataset of **213 proteins (53 effectors, 160 non-e
 
 | Method | TP | TN | FP | FN | Accuracy | Precision | Recall | F1 | MCC |
 |--------|----|----|----|----|----------|-----------|--------|----|-----|
-| **StructEff** | **43** | 143 | 17 | **10** | 87.3% | 0.717 | **0.811** | **0.761** | 0.678 |
+| **FungStructEff** | **43** | 143 | 17 | **10** | 87.3% | 0.717 | **0.811** | **0.761** | 0.678 |
 | PPEPFinder | 36 | **152** | **8** | 17 | 88.3% | **0.818** | 0.679 | 0.742 | 0.672 |
 | EffectorP 3.0 | 36 | 148 | 12 | 17 | 86.4% | 0.750 | 0.679 | 0.713 | 0.620 |
 | EffectorP-fungi 3.0 | 33 | **159** | **1** | 20 | **90.1%** | **0.971** | 0.623 | 0.759 | **0.726** |
 | DeepRedEff | 32 | 91 | 69 | 21 | 57.7% | 0.317 | 0.604 | 0.416 | 0.149 |
 
 **Key highlights:**
-- StructEff detects the **most true effectors (TP=43)** — 7 more than PPEPFinder and EffectorP 3.0
-- StructEff achieves the **highest recall (0.811)** and **best F1-score (0.761)**
-- StructEff achieves **ROC-AUC = 0.8979** — best overall discrimination
+- FungStructEff detects the **most true effectors (TP=43)** — 7 more than PPEPFinder and EffectorP 3.0
+- FungStructEff achieves the **highest recall (0.811)** and **best F1-score (0.761)**
+- FungStructEff achieves **ROC-AUC = 0.8979** — best overall discrimination
 - EffectorP-fungi 3.0 is most conservative (FP=1) but misses 20 effectors
 - DeepRedEff performs poorly with 69 false positives on this dataset
 
@@ -54,8 +54,8 @@ Output: CSV with protein_id, probability, prediction
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/smritisharma31/StructEff.git
-cd StructEff
+git clone https://github.com/smritisharma31/FungStructEff.git
+cd FungStructEff
 ```
 
 ### 2. Install dependencies
@@ -141,7 +141,7 @@ protein_2,0.043,0,Non-effector
 
 ## Model Architecture
 
-StructEff uses a three-stage hybrid architecture:
+FungStructEff uses a three-stage hybrid architecture:
 
 1. **Feature Engineering (35 features)**
    - Structural: phi/psi angles, RSA, contact maps, betweenness centrality
@@ -161,10 +161,10 @@ StructEff uses a three-stage hybrid architecture:
 
 ## Citation
 
-If you use StructEff in your research, please cite:
+If you use FungStructEff in your research, please cite:
 
 ```
-Sharma S, et al. StructEff: A Hybrid Contrastive Learning Framework
+Sharma S, et al. FungStructEff: A Hybrid Contrastive Learning Framework
 Integrating Protein Language Models and Structural Features for
 Fungal Effector Prediction. (2025)
 ```
