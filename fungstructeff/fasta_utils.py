@@ -4,12 +4,11 @@ Input FASTA parsing / sanitization for StructEff.
 
 This is the SINGLE place sequence character-cleaning is defined. The pipeline
 cleans the input ONCE at ingestion (prepare_fasta) and writes a sanitized
-FASTA that every downstream step (folding, MMseqs2, ESM2 embeddings) reads —
+FASTA that every downstream step (MMseqs2, ESM2 embeddings) reads —
 so the same cleaning never has to be re-implemented per consumer.
 
 Scope: character cleaning only. Length caps are model-specific and stay where
-they belong (ESMFold cap in esmfold.py; ESM2's 1022-residue architectural
-limit in predict.py).
+they belong (ESM2's 1022-residue architectural limit, in predict.py).
 """
 import os
 from Bio import SeqIO
