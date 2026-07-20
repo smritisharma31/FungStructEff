@@ -1,10 +1,13 @@
 """
-StructEff — Fungal Effector Prediction Tool
+FungStructEff — Fungal Effector Prediction Tool
 ============================================
+Input is protein STRUCTURES (PDB / mmCIF) — AlphaFold models recommended.
+Sequences are extracted from the structures automatically.
+
 Usage:
-    python predict.py --fasta input.fasta --outdir results/
-    python predict.py --fasta input.fasta --outdir results/ --mmseqs-db /path/to/uniref50
-    python predict.py --fasta input.fasta --outdir results/ --no-mmseqs
+    python predict.py --pdb-dir structures/ --outdir results/
+    python predict.py --pdb-dir structures/ --outdir results/ --mmseqs-db /path/to/uniref50
+    python predict.py --pdb-dir structures/ --outdir results/ --no-mmseqs
 """
 
 import os
@@ -19,40 +22,41 @@ import esm
 from Bio import SeqIO
 from tqdm import tqdm
 
-from structeff.esmfold           import fold_fasta
-from structeff.features.residue  import extract_residue_features
-from structeff.features.graph    import aggregate_to_protein
-from structeff.features.struct   import extract_struct_features
-from structeff.features.entropy  import (
+from fungstructeff.fasta_utils      import prepare_fasta
+from fungstructeff.structures        import prepare_structures, fasta_from_structures
+from fungstructeff.features.residue  import extract_residue_features
+from fungstructeff.features.graph    import aggregate_to_protein
+from fungstructeff.features.struct   import extract_struct_features
+from fungstructeff.features.entropy  import (
     run_mmseqs2,
     extract_entropy_features,
     get_default_entropy_features
 )
-from structeff.features.bio      import extract_bio_features
-from structeff.merge             import merge_all_features, TRAINING_COLUMNS
-
+from fungstructeff.features.bio      import extract_bio_features
+from fungstructeff.merge             import merge_all_features, TRAINING_COLUMNS
+from fungstructeff.siamese           import Siamese
 
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "XGB_MODEL_v5_hardneg.pkl")
 ESM_LAYER  = 33
-THRESHOLD  = 0.64
+THRESHOLD  = 0.2
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="StructEff: Fungal Effector Prediction Tool",
+        description="FungStructEff: Fungal Effector Prediction Tool",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python predict.py --fasta proteins.fasta --outdir results/
-  python predict.py --fasta proteins.fasta --outdir results/ --no-mmseqs
-  python predict.py --fasta proteins.fasta --outdir results/ --mmseqs-db /path/to/uniref50
+  python predict.py --pdb-dir alphafold_pdbs/ --outdir results/
+  python predict.py --pdb-dir alphafold_pdbs/ --outdir results/ --mmseqs-db /path/to/uniref50
+  python predict.py --pdb-dir alphafold_pdbs/ --outdir results/ --no-mmseqs
         """
     )
-    parser.add_argument("--fasta",     required=True,               help="Input FASTA file")
+    parser.add_argument("--pdb-dir",   required=True,               help="Directory (or file) of PDB/CIF structures. AlphaFold models recommended.")
     parser.add_argument("--outdir",    default="results",           help="Output directory")
     parser.add_argument("--mmseqs-db", default=None,                help="Path to MMseqs2 UniRef50 database")
     parser.add_argument("--threads",   default=8,      type=int,    help="Threads for MMseqs2")
-    parser.add_argument("--threshold", default=THRESHOLD, type=float, help="Prediction threshold (default: 0.64)")
+    parser.add_argument("--threshold", default=THRESHOLD, type=float, help="Prediction threshold (default: 0.2)")
     parser.add_argument("--no-mmseqs", action="store_true",         help="Skip MMseqs2 entropy features")
     return parser.parse_args()
 
@@ -71,6 +75,9 @@ def generate_esm_embeddings(fasta_file, device):
     print(f"\n🔹 Generating ESM2 embeddings for {len(records)} sequences...")
     for record in tqdm(records):
         pid = record.id.strip()
+        # Input FASTA was already sanitized by prepare_fasta at ingestion, so
+        # sequences are tokenizer-safe here. The 1022 cap is ESM2's hard
+        # architectural limit (1024 positions minus BOS/EOS) and must stay.
         seq = str(record.seq)[:1022]
         batch = [("protein", seq)]
         _, _, tokens = batch_converter(batch)
@@ -101,6 +108,14 @@ def load_model(model_path):
         print("   Make sure XGB_MODEL_v5_hardneg.pkl is in the same directory as predict.py")
         sys.exit(1)
 
+    # Register Siamese class for pickle
+    try:
+        from fungstructeff.siamese import Siamese
+        import __main__
+        __main__.Siamese = Siamese
+    except ImportError:
+        pass
+
     with open(model_path, "rb") as f:
         bundle = pickle.load(f)
 
@@ -115,10 +130,10 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     print(f"\n{'='*55}")
-    print("  StructEff — Fungal Effector Prediction Tool v1.0")
+    print("  FungStructEff — Fungal Effector Prediction Tool v1.1")
     print(f"{'='*55}")
     print(f"Device   : {device}")
-    print(f"Input    : {args.fasta}")
+    print(f"Input    : {args.pdb_dir}  (structures)")
     print(f"Output   : {args.outdir}")
     print(f"Threshold: {args.threshold}")
     print(f"MMseqs2  : {'disabled' if args.no_mmseqs else args.mmseqs_db or 'not provided'}")
@@ -133,24 +148,58 @@ def main():
     scaler     = bundle["scaler"]
     classifier = bundle["classifier"]
     threshold  = args.threshold
+    print(f"   Active threshold: {threshold} (bundle stored: {bundle['threshold']})")
     model_cl.eval()
 
-    # Get protein IDs
-    records     = list(SeqIO.parse(args.fasta, "fasta"))
+    # Step 0: obtain structures + a matching cleaned FASTA.
+    #   --pdb-dir : use pre-computed structures (AlphaFold recommended) and
+    #               derive sequences from them, so features and embeddings
+    #               describe exactly the residues that are in the structures.
+    #   --fasta   : fold the sequences locally with ESMFold.
+    print(f"\n{'='*55}")
+    print("STEP 0: Ingesting structures and extracting sequences")
+    print(f"{'='*55}")
+    clean_fasta = os.path.join(args.outdir, "cleaned_input.fasta")
+
+    prepare_structures(args.pdb_dir, pdb_dir)
+    raw_fasta = os.path.join(args.outdir, "from_structures.fasta")
+    fasta_from_structures(pdb_dir, raw_fasta)
+
+    report = prepare_fasta(raw_fasta, clean_fasta)
+    print(f"  Read     : {report['n_in']} sequences")
+    print(f"  Kept     : {report['n_out']}")
+    print(f"  Modified : {len(report['modified'])} (non-standard chars cleaned)")
+    print(f"  Dropped  : {len(report['dropped'])}")
+    if report["dropped"]:
+        drop_path = os.path.join(args.outdir, "dropped_sequences.txt")
+        with open(drop_path, "w") as fh:
+            for pid, reason in report["dropped"]:
+                fh.write(f"{pid}\t{reason}\n")
+        print(f"  Dropped IDs written to: {drop_path}")
+    if report["n_out"] == 0:
+        print("\n[FATAL] No usable sequences. Check the input.")
+        sys.exit(1)
+
+    # Get protein IDs (from the cleaned FASTA, so they match every later step)
+    records     = list(SeqIO.parse(clean_fasta, "fasta"))
     protein_ids = [r.id.strip() for r in records]
     print(f"\n📋 Proteins to predict: {len(protein_ids)}")
 
-    # Step 1: ESMFold
+    # Step 1: structures
     print(f"\n{'='*55}")
-    print("STEP 1: Generating 3D structures with ESMFold API")
+    print("STEP 1: Structures ready (no folding — user-supplied models)")
     print(f"{'='*55}")
-    fold_fasta(args.fasta, pdb_dir)
 
     # Step 2: Residue features
     print(f"\n{'='*55}")
     print("STEP 2: Extracting residue-level features")
     print(f"{'='*55}")
     df_residue = extract_residue_features(pdb_dir)
+    if df_residue is None or df_residue.empty or "rsa" not in df_residue.columns:
+        print("\n[FATAL] No parseable residue features were produced.")
+        print("        DSSP could not read the supplied structures.")
+        print("        Check results/pdb_structures/ and failed_structures.txt.")
+        sys.exit(1)
 
     # Step 3: Aggregate
     print(f"\n{'='*55}")
@@ -171,8 +220,8 @@ def main():
     if args.no_mmseqs or args.mmseqs_db is None:
         df_entropy = get_default_entropy_features(protein_ids)
     else:
-        aln_file   = run_mmseqs2(args.fasta, args.mmseqs_db, mmseq_dir, args.threads)
-        df_entropy = extract_entropy_features(aln_file)
+        aln_file   = run_mmseqs2(clean_fasta, args.mmseqs_db, mmseq_dir, args.threads)
+        df_entropy = extract_entropy_features(aln_file, protein_ids)
 
     # Step 6: Bio features
     print(f"\n{'='*55}")
@@ -195,7 +244,7 @@ def main():
     print(f"\n{'='*55}")
     print("STEP 8: Generating ESM2 embeddings")
     print(f"{'='*55}")
-    df_esm, esm_cols = generate_esm_embeddings(args.fasta, device)
+    df_esm, esm_cols = generate_esm_embeddings(clean_fasta, device)
 
     # Merge struct + ESM
     df_struct_df = pd.DataFrame(X_struct, columns=struct_cols)
@@ -209,6 +258,16 @@ def main():
 
     print(f"\n  Final feature dimension: {X.shape}")
 
+    # Safety check: feature count must match what the model was trained on.
+    # Catches feature-pipeline drift before it reaches the classifier and
+    # produces silently-wrong probabilities.
+    expected_input = bundle.get("input_dim", 1315)
+    if X.shape[1] != expected_input:
+        print(f"\n[FATAL] Feature dimension mismatch: built {X.shape[1]}, "
+              f"model expects {expected_input}.")
+        print("        A feature step changed shape — predictions would be invalid.")
+        sys.exit(1)
+
     # Contrastive transform
     print("\n🔹 Applying contrastive transform...")
     model_cl = model_cl.to(device)
@@ -220,6 +279,12 @@ def main():
 
     X_final = np.concatenate([X, X_emb], axis=1)
     print(f"  Transformed shape: {X_final.shape}")
+
+    expected_final = bundle.get("final_dim", 1571)
+    if X_final.shape[1] != expected_final:
+        print(f"\n[FATAL] Transformed dimension mismatch: got {X_final.shape[1]}, "
+              f"model expects {expected_final}.")
+        sys.exit(1)
 
     # Predict
     print(f"\n🔹 Predicting with threshold={threshold}...")
@@ -234,12 +299,12 @@ def main():
         "label"      : ["Effector" if p == 1 else "Non-effector" for p in y_pred]
     })
 
-    output_path = os.path.join(args.outdir, "structeff_predictions.csv")
+    output_path = os.path.join(args.outdir, "fungstructeff_predictions.csv")
     df_results.to_csv(output_path, index=False)
 
     # Summary
     print(f"\n{'='*55}")
-    print("  STRUCTEFF PREDICTION COMPLETE")
+    print("  FUNGSTRUCTEFF PREDICTION COMPLETE")
     print(f"{'='*55}")
     print(f"Total proteins          : {len(df_results)}")
     print(f"Predicted effectors     : {y_pred.sum()}")

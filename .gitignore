@@ -1,0 +1,39 @@
+# ---- FungStructEff: large/local artifacts that must NOT be committed ----
+
+# MMseqs2 binary (platform-specific, installed per machine)
+tools/
+
+# UniRef50 / MMseqs databases (100+ GB)
+mmseqs_db/
+database/
+
+# Pipeline outputs
+results/
+results_*/
+
+# Model weight caches (downloaded on first run)
+*.pt
+*.bin
+*.safetensors
+
+# Backups / scratch
+*.bak
+*.orig
+*.tmp
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+*.egg-info/
+.venv/
+venv/
+
+# OS / editor
+.DS_Store
+*.swp
+R_solani*
+S_hepiali*
+fungi*
+filtered*
