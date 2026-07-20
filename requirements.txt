@@ -1,13 +1,47 @@
-torch>=1.12.0
-fair-esm>=2.0.0
-numpy>=1.21.0
-pandas>=1.3.0
-scikit-learn>=1.6.1
-xgboost>=1.6.0
-biopython>=1.79
-tqdm>=4.62.0
-scipy>=1.7.0
-networkx>=2.6.0
-requests>=2.26.0
-transformers>=4.40          # local ESMFold (EsmForProteinFolding)
-accelerate
+# =====================================================================
+# FungStructEff requirements
+# Python 3.10 (conda env: FungStructEff)
+# =====================================================================
+#
+# PyTorch is NOT installed from plain PyPI. On NVIDIA Blackwell cards
+# (RTX 50-series, e.g. 5070 Ti = compute capability sm_120) you MUST use
+# a CUDA 12.8 (cu128) build, or GPU work fails at runtime with
+# "no kernel image available" even though cuda.is_available() == True.
+#
+#   Install torch FIRST:
+#       pip install torch --index-url https://download.pytorch.org/whl/cu128
+#   If the stable cu128 wheel lacks sm_120, use the nightly:
+#       pip install --pre torch --index-url https://download.pytorch.org/whl/nightly/cu128
+#
+#   Verify:
+#       python -c "import torch; print(torch.cuda.get_arch_list())"
+#
+#   Then:  pip install -r requirements.txt
+# =====================================================================
+
+# torch  (install separately via the cu128 index — see note above)
+
+fair-esm                    # ESM2-650M sequence embeddings (import esm)
+biopython                   # PDB/mmCIF parsing, DSSP interface, FASTA I/O
+scikit-learn==1.6.1         # pinned: matches the StandardScaler in the model bundle
+xgboost                     # final classifier
+scipy                       # conservation entropy statistics
+pandas
+numpy
+tqdm
+
+# =====================================================================
+# External tools (NOT pip — see README for full instructions):
+#
+#   DSSP    — required for residue-level features
+#             (conda install -c salilab dssp; binary is `mkdssp`)
+#
+#   MMseqs2 — required for conservation entropy features. Static binary
+#             installed into  tools/mmseqs/bin/mmseqs  and UniRef50 built
+#             into  mmseqs_db/uniref50  (both gitignored).
+#             Skip with --no-mmseqs to zero-fill entropy features.
+#
+# NOTE: FungStructEff takes pre-computed STRUCTURES as input (PDB/CIF).
+#       It does not fold sequences, so no ESMFold / transformers
+#       dependency is required.
+# =====================================================================
