@@ -1,14 +1,23 @@
-# FungStructEff 🔬
+# FungStructEff
 
-**A Hybrid Contrastive Learning Framework for Fungal Effector Prediction**
+**Structure-based prediction of fungal effector proteins.**
 
-FungStructEff predicts fungal effector proteins from protein sequences using a hybrid deep learning pipeline. Input sequences are first folded into 3D PDB structures using ESMFold, from which **35 structural and physicochemical features are manually computed** from the PDB structures (phi/psi torsion angles, RSA, contact maps, graph topology, betweenness centrality, pLDDT, cysteine content, secondary structure fractions, etc.). Sequences are additionally used for **MMseqs2-based conservation features** (entropy, pct_conserved) and **ESM2-650M sequence embeddings** (1280-dim). All features are combined and trained via a **dynamic hard negative contrastive Siamese network** followed by XGBoost classification.
+FungStructEff predicts fungal effectors from **3D protein structures**. It
+combines residue-level, structural, and biological features extracted from the
+structure with MMseqs2 conservation entropy and ESM2-650M sequence embeddings,
+transforms them through a contrastive (Siamese) network, and classifies with
+XGBoost.
 
----
+> **Input is a structure, not a sequence.** Supply pre-computed PDB/mmCIF
+> models — **AlphaFold structures are strongly recommended**. The model's
+> structural features were derived from AlphaFold-quality models, and
+> prediction accuracy degrades noticeably on structures from other predictors.
+> Sequences are extracted from the structures automatically.
 
-## Performance
+## Benchmark
 
-Benchmarked on an independent dataset of **213 proteins (53 effectors, 160 non-effectors)**.
+Evaluated on an independent dataset of **213 proteins (53 effectors, 160
+non-effectors)**:
 
 | Method | TP | TN | FP | FN | Accuracy | Precision | Recall | F1 | MCC |
 |--------|----|----|----|----|----------|-----------|--------|----|-----|
@@ -18,178 +27,227 @@ Benchmarked on an independent dataset of **213 proteins (53 effectors, 160 non-e
 | EffectorP-fungi 3.0 | 33 | **159** | **1** | 20 | **90.1%** | **0.971** | 0.623 | 0.759 | **0.726** |
 | DeepRedEff | 32 | 91 | 69 | 21 | 57.7% | 0.317 | 0.604 | 0.416 | 0.149 |
 
-**Key highlights:**
-- FungStructEff detects the **most true effectors (TP=43)** — 7 more than PPEPFinder and EffectorP 3.0
-- FungStructEff achieves the **highest recall (0.811)** and **best F1-score (0.761)**
-- FungStructEff achieves **ROC-AUC = 0.8979** — best overall discrimination
-- EffectorP-fungi 3.0 is most conservative (FP=1) but misses 20 effectors
-- DeepRedEff performs poorly with 69 false positives on this dataset
+- FungStructEff detects the **most true effectors (TP = 43)** — 7 more than
+  PPEPFinder and EffectorP 3.0.
+- It achieves the **highest recall (0.811)** and the **best F1 (0.761)**, with
+  **ROC-AUC = 0.8979**.
+- EffectorP-fungi 3.0 is the most conservative (FP = 1) but misses 20 effectors.
+- DeepRedEff performs poorly on this dataset (69 false positives).
+
+FungStructEff is tuned for **recall** — the default threshold of 0.2 favours
+finding candidate effectors over minimising false positives, which suits
+discovery workflows. Raise `--threshold` if you need higher precision.
+
+## Pipeline
+
+```
+PDB / mmCIF structures
+ ├─ STEP 0  ingest structures + extract sequences
+ ├─ STEP 1  structures ready (no folding)
+ ├─ STEP 2  residue-level features        (DSSP)
+ ├─ STEP 3  aggregate to protein level
+ ├─ STEP 4  structural features
+ ├─ STEP 5  conservation entropy          (MMseqs2 vs UniRef50)
+ ├─ STEP 6  biological features
+ ├─ STEP 7  merge + scale
+ ├─ STEP 8  ESM2-650M embeddings
+ └─ contrastive transform → XGBoost → prediction
+```
+
+## Repository layout
+
+```
+FungStructEff/
+├── predict.py
+├── check_setup.py              # dependency checker
+├── fungstructeff/              # pipeline package
+│   ├── structures.py           # PDB/CIF ingestion + sequence extraction
+│   ├── fasta_utils.py          # sequence sanitization
+│   ├── siamese.py              # contrastive network (needed to load the model)
+│   ├── merge.py
+│   └── features/               # residue, graph, struct, entropy, bio
+├── XGB_MODEL_v5_hardneg.pkl    # trained model bundle
+├── examples/seq_006.pdb        # example structure (known effector)
+├── requirements.txt
+├── tools/                      # MMseqs2 binary      (gitignored)
+├── mmseqs_db/                  # UniRef50 DB ~150 GB (gitignored)
+└── results/                    # outputs             (gitignored)
+```
 
 ---
 
-## How It Works
+## System requirements
 
-```
-Input: FASTA file (protein sequences)
-        ↓
-Step 1: ESMFold API → 3D PDB structures
-        ↓
-Step 2: Structural feature extraction
-        (phi/psi angles, RSA, contact maps,
-         graph features, pLDDT, DSSP, etc.)
-        ↓
-Step 3: MMseqs2 → sequence conservation features
-        (entropy, pct_conserved, pct_variable)
-        ↓
-Step 4: ESM2-650M → sequence embeddings (1280-dim)
-        ↓
-Step 5: Siamese contrastive transform → XGBoost
-        ↓
-Output: CSV with protein_id, probability, prediction
-```
+| Component  | Requirement |
+|------------|-------------|
+| OS         | Linux (x86-64). Tested on Ubuntu. |
+| Python     | 3.10 (required — cu128 torch wheels are cp310) |
+| GPU        | NVIDIA CUDA GPU recommended (ESM2-650M ≈ 2.5 GB VRAM). CPU works but is slower. |
+| GPU driver | CUDA 12.8-capable. **Blackwell cards (RTX 50-series, sm_120) require a cu128 torch build.** |
+| CPU        | AVX2 recommended (standard MMseqs2 binary; an SSE4.1 build exists otherwise) |
+| RAM        | 16 GB+ (MMseqs2 search against UniRef50 splits automatically if memory is limited) |
+| Disk       | ~155 GB+ free: UniRef50 MMseqs DB (~150 GB) + ESM2-650M weights (~2.5 GB) + outputs |
 
 ---
 
 ## Installation
 
-### 1. Clone the repository
+### 1. Clone
+
 ```bash
 git clone https://github.com/smritisharma31/FungStructEff.git
 cd FungStructEff
 ```
 
-### 2. Install dependencies
+All subsequent commands assume you are inside this directory.
+
+### 2. Environment (Python 3.10)
+
+```bash
+conda create -n FungStructEff python=3.10 -y
+conda activate FungStructEff
+```
+
+### 3. PyTorch — install FIRST
+
+Blackwell GPUs (RTX 50-series, sm_120) need a CUDA 12.8 build; cu121/cu124
+wheels lack sm_120 kernels and fail at runtime even though
+`cuda.is_available()` returns True.
+
+```bash
+pip install torch --index-url https://download.pytorch.org/whl/cu128
+# if the stable cu128 wheel lacks sm_120:
+# pip install --pre torch --index-url https://download.pytorch.org/whl/nightly/cu128
+
+python -c "import torch; print(torch.cuda.get_arch_list()); \
+x=torch.randn(2000,2000,device='cuda'); print('ok', tuple((x@x).shape))"
+```
+
+For other GPUs, pick the build matching your driver: https://pytorch.org/get-started/locally/
+
+### 4. Python dependencies
+
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Install DSSP
-```bash
-# Ubuntu/Debian
-sudo apt-get install dssp
+### 5. External tools
 
-# Or via conda
-conda install -c salilab dssp
+**DSSP** (required — residue-level features):
+
+```bash
+conda install -c salilab dssp -y      # provides `mkdssp`
 ```
 
-### 4. Install MMseqs2 (optional but recommended)
-```bash
-# Ubuntu
-sudo apt install mmseqs2
+**MMseqs2** (required for conservation features):
 
-# Or download binary
+```bash
+mkdir -p tools
 wget https://mmseqs.com/latest/mmseqs-linux-avx2.tar.gz
-tar xvfz mmseqs-linux-avx2.tar.gz
-export PATH=$(pwd)/mmseqs/bin/:$PATH
+tar xzf mmseqs-linux-avx2.tar.gz -C tools/
+rm mmseqs-linux-avx2.tar.gz
+ls tools/mmseqs/bin/mmseqs
+
+echo "export PATH=$(pwd)/tools/mmseqs/bin:\$PATH" >> ~/.bashrc
+source ~/.bashrc
+mmseqs version
 ```
 
-### 5. Download UniRef50 database (for MMseqs2)
+> "Illegal instruction" means your CPU lacks AVX2 — use the
+> `mmseqs-linux-sse41` build instead.
+
+### 6. UniRef50 database (~150 GB, several hours)
+
 ```bash
-mmseqs databases UniRef50 uniref50 tmp
+mkdir -p mmseqs_db
+mmseqs databases UniRef50 mmseqs_db/uniref50 mmseqs_db/tmp --threads 8
+rm -rf mmseqs_db/tmp
 ```
+
+---
+
+## Verify the installation
+
+**1. Check dependencies:**
+
+```bash
+python check_setup.py
+```
+
+Reports PASS / WARN / FAIL for Python, packages, torch + CUDA (including
+Blackwell sm_120), DSSP, MMseqs2, the model bundle, and the UniRef50 database.
+Exits non-zero if a hard requirement is missing.
+
+**2. Run the bundled example structure:**
+
+```bash
+python predict.py --pdb-dir examples/ --outdir results_example/ --no-mmseqs
+```
+
+`examples/seq_006.pdb` is the structure of a characterised fungal effector.
+A successful run prints STEP 0–8 and writes
+`results_example/fungstructeff_predictions.csv` with one row, `seq_006`.
+
+This is a positive control as well as a smoke test: the example protein is a
+known effector, so it should be predicted as **Effector** at the default
+threshold. If it is not, check that DSSP is working and that the structure
+parsed correctly before running on your own data.
+
+> Note: `--no-mmseqs` zero-fills the conservation features, so probabilities
+> from this quick check differ slightly from a full run with `--mmseqs-db`.
 
 ---
 
 ## Usage
 
-### Basic usage (without MMseqs2):
 ```bash
-python predict.py \
-    --fasta your_proteins.fasta \
-    --outdir results/ \
-    --no-mmseqs
+# with conservation features (recommended):
+python predict.py --pdb-dir alphafold_pdbs/ --outdir results/ \
+    --mmseqs-db mmseqs_db/uniref50
+
+# fast run without MMseqs2 (entropy features zero-filled):
+python predict.py --pdb-dir alphafold_pdbs/ --outdir results/ --no-mmseqs
 ```
 
-### Full pipeline (with MMseqs2):
-```bash
-python predict.py \
-    --fasta your_proteins.fasta \
-    --outdir results/ \
-    --mmseqs-db /path/to/uniref50 \
-    --threads 16
-```
+| Option        | Default   | Description                                        |
+|---------------|-----------|----------------------------------------------------|
+| `--pdb-dir`   | (required)| Directory (or single file) of PDB/mmCIF structures |
+| `--outdir`    | `results` | Output directory                                   |
+| `--mmseqs-db` | none      | Path to the MMseqs2 UniRef50 DB prefix             |
+| `--threads`   | `8`       | Threads for MMseqs2                                |
+| `--threshold` | `0.2`     | Prediction threshold (high-recall default)         |
+| `--no-mmseqs` | off       | Skip MMseqs2; zero-fill entropy features           |
 
-### Input format:
-```
->protein_1
-MSTLVPSLCLAAALVHAAAAASAPETPKPQVLKGSDMQNVSESPHPEPQIELNPGALSTPTPALLLQG
->protein_2
-MKLVPSLFLAAALVHAAAAASAPETPKPQVLKGSDMQ
-```
+### Input structures
 
-### Output:
-```
-protein_id,probability,prediction,label
-protein_1,0.923,1,Effector
-protein_2,0.043,0,Non-effector
-```
+- `.pdb`, `.ent`, `.cif`, `.mmcif` are accepted; mmCIF is converted automatically.
+- Protein IDs come from filenames. AlphaFold DB names are unwrapped:
+  `AF-Q9XYZ1-F1-model_v4.pdb` → `Q9XYZ1`.
+- IDs are sanitized and de-duplicated, so unusual filenames cannot collide.
+  `pdb_structures/structure_manifest.tsv` maps every ID to its source file.
+- **Experimental PDBs:** sequences are taken from `SEQRES` when present, so
+  unresolved regions are not silently deleted. Chain breaks and multi-chain
+  files are recorded in `sequence_extraction_notes.txt`.
+
+### Outputs
+
+| File | Contents |
+|------|----------|
+| `fungstructeff_predictions.csv` | `protein_id`, `probability`, `prediction`, `label` |
+| `pdb_structures/` | normalized structures + `structure_manifest.tsv` |
+| `from_structures.fasta` | sequences extracted from the structures |
+| `cleaned_input.fasta` | sanitized sequences used downstream |
+| `sequence_extraction_notes.txt` | chain breaks, multi-chain, extraction warnings |
+
+The default threshold is **0.2**, matching the high-recall objective the model
+was tuned for. Override with `--threshold`.
 
 ---
 
-## Arguments
+## Notes
 
-| Argument | Description | Default |
-|----------|-------------|---------|
-| `--fasta` | Input FASTA file | required |
-| `--outdir` | Output directory | `results/` |
-| `--mmseqs-db` | Path to UniRef50 MMseqs2 database | None |
-| `--threads` | Number of threads for MMseqs2 | 8 |
-| `--threshold` | Prediction threshold | 0.64 |
-| `--no-mmseqs` | Skip MMseqs2 entropy features | False |
-
----
-
-## Model Architecture
-
-FungStructEff uses a three-stage hybrid architecture:
-
-1. **Feature Engineering (35 features)**
-   - Structural: phi/psi angles, RSA, contact maps, betweenness centrality
-   - Physicochemical: charged/polar/hydrophobic fractions, cysteine content
-   - Conservation: sequence entropy from MMseqs2 alignment
-   - Graph: contact density, graph density, total SASA
-
-2. **ESM2-650M Embeddings (1280-dim)**
-   - Mean pooled representations from ESM2 650M parameter model
-
-3. **Siamese Contrastive Network + XGBoost**
-   - Dynamic hard negative mining during contrastive training
-   - 256-dimensional transformed embeddings
-   - XGBoost classifier on concatenated features
-
----
-
-## Citation
-
-If you use FungStructEff in your research, please cite:
-
-```
-Sharma S, et al. FungStructEff: A Hybrid Contrastive Learning Framework
-Integrating Protein Language Models and Structural Features for
-Fungal Effector Prediction. (2025)
-```
-
----
-
-## Requirements
-
-- Python >= 3.8
-- PyTorch >= 1.12
-- ESM2 (fair-esm)
-- XGBoost >= 1.6
-- Biopython >= 1.79
-- MMseqs2 (optional)
-- mkdssp
-
----
-
-## License
-
-MIT License — see LICENSE file for details.
-
----
-
-## Contact
-
-Smriti Sharma — smriti1831@gmail.com
-GitHub: https://github.com/smritisharma31
+- ESM2-650M weights (~2.5 GB) download on first run and are cached afterwards.
+- `scikit-learn` is pinned to **1.6.1** to match the `StandardScaler` stored in
+  the model bundle; other versions may warn or alter feature scaling.
+- FungStructEff does **not** fold sequences. Generate structures beforehand
+  with AlphaFold (e.g. AlphaFold DB or ColabFold).
