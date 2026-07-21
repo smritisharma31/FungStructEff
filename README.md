@@ -252,4 +252,4 @@ was tuned for. Override with `--threshold`.
 - `scikit-learn` is pinned to **1.6.1** to match the `StandardScaler` stored in
   the model bundle; other versions may warn or alter feature scaling.
 - FungStructEff does **not** fold sequences. Generate structures beforehand
-  with AlphaFold (e.g. AlphaFold DB or ColabFold).
+  with AlphaFold or ColabFold (https://alphafoldserver.com/).
