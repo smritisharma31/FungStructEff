@@ -161,7 +161,11 @@ mmseqs version
 ```bash
 mkdir -p mmseqs_db
 mmseqs databases UniRef50 mmseqs_db/uniref50 mmseqs_db/tmp --threads 8
-rm -rf mmseqs_db/tmp
+mmseqs createindex mmseqs_db/uniref50 mmseqs_db/tmp_index -s 7.5 --threads 8
+rm -rf mmseqs_db/tmp mmseqs_db/tmp_index
+
+#Confirm the index with:
+ls -lh mmseqs_db/uniref50.idx*
 ```
 
 ---
@@ -205,8 +209,6 @@ parsed correctly before running on your own data.
 python predict.py --pdb-dir alphafold_pdbs/ --outdir results/ \
     --mmseqs-db mmseqs_db/uniref50
 
-# fast run without MMseqs2 (entropy features zero-filled):
-python predict.py --pdb-dir alphafold_pdbs/ --outdir results/ --no-mmseqs
 ```
 
 | Option        | Default   | Description                                        |
