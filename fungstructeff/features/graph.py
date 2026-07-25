@@ -1,5 +1,5 @@
 """
-structeff/features/graph.py
+fungstructeff/features/graph.py
 Aggregates residue-level features to protein-level.
 """
 

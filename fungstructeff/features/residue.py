@@ -1,5 +1,5 @@
 """
-structeff/features/residue.py
+fungstructeff/features/residue.py
 Extracts residue-level structural features from PDB files.
 """
 

@@ -1,5 +1,5 @@
 """
-structeff/features/bio.py
+fungstructeff/features/bio.py
 Computes biological features from PDB files.
 (cysteine count, cysteine fraction, has_4plus_cys)
 """

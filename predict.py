@@ -38,7 +38,7 @@ from fungstructeff.siamese           import Siamese
 
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "XGB_MODEL_v5_hardneg.pkl")
 ESM_LAYER  = 33
-THRESHOLD  = 0.2
+THRESHOLD  = 0.64
 
 
 def parse_args():
@@ -56,7 +56,7 @@ Examples:
     parser.add_argument("--outdir",    default="results",           help="Output directory")
     parser.add_argument("--mmseqs-db", default=None,                help="Path to MMseqs2 UniRef50 database")
     parser.add_argument("--threads",   default=8,      type=int,    help="Threads for MMseqs2")
-    parser.add_argument("--threshold", default=THRESHOLD, type=float, help="Prediction threshold (default: 0.2)")
+    parser.add_argument("--threshold", default=THRESHOLD, type=float, help="Prediction threshold (default: 0.64)")
     parser.add_argument("--no-mmseqs", action="store_true",         help="Skip MMseqs2 entropy features")
     return parser.parse_args()
 
@@ -130,7 +130,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     print(f"\n{'='*55}")
-    print("  FungStructEff — Fungal Effector Prediction Tool v1.1")
+    print("  FungStructEff — Fungal Effector Prediction Tool v1.0")
     print(f"{'='*55}")
     print(f"Device   : {device}")
     print(f"Input    : {args.pdb_dir}  (structures)")
