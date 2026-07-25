@@ -217,7 +217,7 @@ python predict.py --pdb-dir alphafold_pdbs/ --outdir results/ \
 | `--outdir`    | `results` | Output directory                                   |
 | `--mmseqs-db` | none      | Path to the MMseqs2 UniRef50 DB prefix             |
 | `--threads`   | `8`       | Threads for MMseqs2                                |
-| `--threshold` | `0.2`     | Prediction threshold (high-recall default)         |
+| `--threshold` | `0.64`     | Prediction threshold (high-recall default)         |
 | `--no-mmseqs` | off       | Skip MMseqs2; zero-fill entropy features           |
 
 ### Input structures
@@ -241,7 +241,7 @@ python predict.py --pdb-dir alphafold_pdbs/ --outdir results/ \
 | `cleaned_input.fasta` | sanitized sequences used downstream |
 | `sequence_extraction_notes.txt` | chain breaks, multi-chain, extraction warnings |
 
-The default threshold is **0.2**, matching the high-recall objective the model
+The default threshold is **0.64**, matching the high-recall objective the model
 was tuned for. Override with `--threshold`.
 
 ---
