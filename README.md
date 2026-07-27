@@ -34,7 +34,7 @@ non-effectors)**:
 - EffectorP-fungi 3.0 is the most conservative (FP = 1) but misses 20 effectors.
 - DeepRedEff performs poorly on this dataset (69 false positives).
 
-FungStructEff is tuned for **recall** — the default threshold of 0.2 favours
+FungStructEff is tuned for **recall** — the default threshold of 0.64 favours
 finding candidate effectors over minimising false positives, which suits
 discovery workflows. Raise `--threshold` if you need higher precision.
 
@@ -67,7 +67,7 @@ FungStructEff/
 │   ├── merge.py
 │   └── features/               # residue, graph, struct, entropy, bio
 ├── XGB_MODEL_v5_hardneg.pkl    # trained model bundle
-├── examples/seq_006.pdb        # example structure (known effector)
+├── examples/Fung-14.pdb        # example structure (known effector)
 ├── requirements.txt
 ├── tools/                      # MMseqs2 binary      (gitignored)
 ├── mmseqs_db/                  # UniRef50 DB ~150 GB (gitignored)
@@ -188,9 +188,11 @@ Exits non-zero if a hard requirement is missing.
 python predict.py --pdb-dir examples/ --outdir results_example/ --no-mmseqs
 ```
 
-`examples/seq_006.pdb` is the structure of a characterised fungal effector.
+`examples/Fung-14.pdb` is the structure of a characterised fungal effector.
+Similarly, `examples/Non-10.pdb` is an example of non-effector.
 A successful run prints STEP 0–8 and writes
-`results_example/fungstructeff_predictions.csv` with one row, `seq_006`.
+`results_example/fungstructeff_predictions.csv` with two rows, 
+predicting `Fung-14` as effector and `Non-10` as non-effector.
 
 This is a positive control as well as a smoke test: the example protein is a
 known effector, so it should be predicted as **Effector** at the default
@@ -217,14 +219,14 @@ python predict.py --pdb-dir alphafold_pdbs/ --outdir results/ \
 | `--outdir`    | `results` | Output directory                                   |
 | `--mmseqs-db` | none      | Path to the MMseqs2 UniRef50 DB prefix             |
 | `--threads`   | `8`       | Threads for MMseqs2                                |
-| `--threshold` | `0.64`     | Prediction threshold (high-recall default)         |
+| `--threshold` | `0.64`     | Prediction threshold (high-recall default)        |
 | `--no-mmseqs` | off       | Skip MMseqs2; zero-fill entropy features           |
 
 ### Input structures
 
 - `.pdb`, `.ent`, `.cif`, `.mmcif` are accepted; mmCIF is converted automatically.
 - Protein IDs come from filenames. AlphaFold DB names are unwrapped:
-  `AF-Q9XYZ1-F1-model_v4.pdb` → `Q9XYZ1`.
+  `AF-Q9XYZ1-F1-model_0_v4.pdb` → `Q9XYZ1`.
 - IDs are sanitized and de-duplicated, so unusual filenames cannot collide.
   `pdb_structures/structure_manifest.tsv` maps every ID to its source file.
 - **Experimental PDBs:** sequences are taken from `SEQRES` when present, so
