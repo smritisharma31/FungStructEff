@@ -5,14 +5,20 @@ Input is protein STRUCTURES (PDB / mmCIF) — AlphaFold models recommended.
 Sequences are extracted from the structures automatically.
 
 Usage:
-    python predict.py --pdb-dir structures/ --outdir results/
     python predict.py --pdb-dir structures/ --outdir results/ --mmseqs-db /path/to/uniref50
-    python predict.py --pdb-dir structures/ --outdir results/ --no-mmseqs
+
+An MMseqs2 database is required: the model was trained with conservation
+features and running without them degrades predictions. --no-mmseqs zero-fills
+them for smoke tests only.
+
+The decision threshold comes from the model bundle. It was selected on the
+validation partition and should not normally be overridden.
 """
 
 import os
 import sys
 import gc
+import json
 import argparse
 import pickle
 import numpy as np
@@ -36,9 +42,8 @@ from fungstructeff.features.bio      import extract_bio_features
 from fungstructeff.merge             import merge_all_features, TRAINING_COLUMNS
 from fungstructeff.siamese           import Siamese
 
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "XGB_MODEL_v5_hardneg.pkl")
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "XGB_MODEL_v7_hardneg_val_homology.pkl")
 ESM_LAYER  = 33
-THRESHOLD  = 0.64
 
 
 def parse_args():
@@ -47,17 +52,24 @@ def parse_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python predict.py --pdb-dir alphafold_pdbs/ --outdir results/
   python predict.py --pdb-dir alphafold_pdbs/ --outdir results/ --mmseqs-db /path/to/uniref50
-  python predict.py --pdb-dir alphafold_pdbs/ --outdir results/ --no-mmseqs
+  python predict.py --pdb-dir alphafold_pdbs/ --outdir results/ --no-mmseqs   # degraded, smoke test only
         """
     )
     parser.add_argument("--pdb-dir",   required=True,               help="Directory (or file) of PDB/CIF structures. AlphaFold models recommended.")
     parser.add_argument("--outdir",    default="results",           help="Output directory")
-    parser.add_argument("--mmseqs-db", default=None,                help="Path to MMseqs2 UniRef50 database")
+    parser.add_argument("--mmseqs-db", default=None,                help="Path to MMseqs2 UniRef50 database. Required unless --no-mmseqs.")
     parser.add_argument("--threads",   default=8,      type=int,    help="Threads for MMseqs2")
-    parser.add_argument("--threshold", default=THRESHOLD, type=float, help="Prediction threshold (default: 0.64)")
-    parser.add_argument("--no-mmseqs", action="store_true",         help="Skip MMseqs2 entropy features")
+    parser.add_argument("--threshold", default=None,  type=float,
+                        help="Override the decision threshold. Default: the operating point "
+                             "stored in the model bundle, selected on the validation "
+                             "partition. Only change this if you have your own validation "
+                             "data to select on.")
+    parser.add_argument("--no-mmseqs", action="store_true",
+                        help="Run without MMseqs2 conservation features, zero-filling them. "
+                             "The model was trained WITH these features, so predictions will "
+                             "be degraded. Use only for a quick smoke test, never to produce "
+                             "results you intend to report.")
     return parser.parse_args()
 
 
@@ -105,7 +117,8 @@ def load_model(model_path):
 
     if not os.path.exists(model_path):
         print(f"❌ Model not found: {model_path}")
-        print("   Make sure XGB_MODEL_v5_hardneg.pkl is in the same directory as predict.py")
+        print("   Make sure XGB_MODEL_v7_hardneg_val_homology.pkl is in the same "
+              "directory as predict.py")
         sys.exit(1)
 
     # Register Siamese class for pickle
@@ -135,7 +148,7 @@ def main():
     print(f"Device   : {device}")
     print(f"Input    : {args.pdb_dir}  (structures)")
     print(f"Output   : {args.outdir}")
-    print(f"Threshold: {args.threshold}")
+    print(f"Threshold: {'model bundle default' if args.threshold is None else args.threshold}")
     print(f"MMseqs2  : {'disabled' if args.no_mmseqs else args.mmseqs_db or 'not provided'}")
 
     os.makedirs(args.outdir, exist_ok=True)
@@ -147,9 +160,35 @@ def main():
     model_cl   = bundle["model_cl"]
     scaler     = bundle["scaler"]
     classifier = bundle["classifier"]
-    threshold  = args.threshold
-    print(f"   Active threshold: {threshold} (bundle stored: {bundle['threshold']})")
     model_cl.eval()
+
+    # Decision threshold: the bundle's stored operating point unless the user
+    # overrides it. The stored value was selected on the validation partition,
+    # which is the only set it may be selected on — picking a threshold on the
+    # test or benchmark data would make the reported metrics optimistic.
+    if args.threshold is None:
+        threshold = float(bundle["threshold"])
+        rule      = bundle.get("threshold_rule", "selected on validation partition")
+        print(f"   Active threshold: {threshold:.4g}  ({rule})")
+    else:
+        threshold = float(args.threshold)
+        print(f"   Active threshold: {threshold:.4g}  "
+              f"(user override; bundle stores {float(bundle['threshold']):.4g})")
+
+    # Conservation features: the model was fitted with them, so running without
+    # them silently zero-fills 6 of the 1571 features and degrades the scores
+    # (measured on the 213-protein benchmark: ROC-AUC 0.886 vs 0.907). Refuse
+    # rather than produce quietly wrong numbers.
+    if bundle.get("uses_conservation", True) and not args.no_mmseqs and args.mmseqs_db is None:
+        sys.exit(
+            "\n❌ No MMseqs2 database given (--mmseqs-db).\n"
+            "   This model was trained with conservation (entropy) features. Running\n"
+            "   without them zero-fills those features and degrades predictions —\n"
+            "   on the benchmark set, ROC-AUC drops from 0.907 to 0.886.\n\n"
+            "   Either:\n"
+            "     --mmseqs-db /path/to/uniref50   compute the features properly\n"
+            "     --no-mmseqs                     accept degraded predictions (smoke tests only)\n"
+        )
 
     # Step 0: obtain structures + a matching cleaned FASTA.
     #   --pdb-dir : use pre-computed structures (AlphaFold recommended) and
@@ -218,8 +257,13 @@ def main():
     print("STEP 5: Conservation features")
     print(f"{'='*55}")
     if args.no_mmseqs or args.mmseqs_db is None:
+        print("⚠️  Conservation features ZERO-FILLED (--no-mmseqs). The model was "
+              "trained with\n    these features; predictions below are degraded and "
+              "must not be reported.")
+        conservation = False
         df_entropy = get_default_entropy_features(protein_ids)
     else:
+        conservation = True
         aln_file   = run_mmseqs2(clean_fasta, args.mmseqs_db, mmseq_dir, args.threads)
         df_entropy = extract_entropy_features(aln_file, protein_ids)
 
@@ -302,6 +346,24 @@ def main():
     output_path = os.path.join(args.outdir, "fungstructeff_predictions.csv")
     df_results.to_csv(output_path, index=False)
 
+    # Run manifest: a predictions file should never be separable from the
+    # threshold and the feature set that produced it.
+    manifest = {
+        "model_bundle"         : os.path.basename(MODEL_PATH),
+        "model_version"        : bundle.get("version", "unknown"),
+        "threshold"            : threshold,
+        "threshold_source"     : "model bundle" if args.threshold is None else "user override",
+        "threshold_rule"       : bundle.get("threshold_rule", ""),
+        "conservation_features": "computed" if conservation else "ZERO-FILLED",
+        "mmseqs_db"            : args.mmseqs_db or "",
+        "struct_seed"          : os.environ.get("FUNGSTRUCTEFF_SEED", "42"),
+        "n_proteins"           : int(len(df_results)),
+        "n_predicted_effector" : int(y_pred.sum()),
+    }
+    manifest_path = os.path.join(args.outdir, "run_manifest.json")
+    with open(manifest_path, "w") as fh:
+        json.dump(manifest, fh, indent=2)
+
     # Summary
     print(f"\n{'='*55}")
     print("  FUNGSTRUCTEFF PREDICTION COMPLETE")
@@ -309,7 +371,11 @@ def main():
     print(f"Total proteins          : {len(df_results)}")
     print(f"Predicted effectors     : {y_pred.sum()}")
     print(f"Predicted non-effectors : {(y_pred==0).sum()}")
+    print(f"Threshold               : {threshold:.4g}")
+    if not conservation:
+        print("⚠️  Conservation features were ZERO-FILLED — do not report these numbers.")
     print(f"\n✅ Results saved: {output_path}")
+    print(f"✅ Run manifest  : {manifest_path}")
 
     print("\nTop effector predictions:")
     top = df_results[df_results["prediction"]==1].sort_values(

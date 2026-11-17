@@ -122,13 +122,13 @@ else:
 
 # ---- Model bundle ----------------------------------------------------
 here = os.path.dirname(os.path.abspath(__file__))
-model_path = os.path.join(here, "XGB_MODEL_v5_hardneg.pkl")
+model_path = os.path.join(here, "XGB_MODEL_v7_hardneg_val_homology.pkl")
 if os.path.exists(model_path):
     record(PASS, "model bundle present",
            f"{os.path.basename(model_path)} ({os.path.getsize(model_path)/1e6:.1f} MB)")
 else:
     record(FAIL, "model bundle present",
-           "XGB_MODEL_v5_hardneg.pkl not found next to this script")
+           "XGB_MODEL_v7_hardneg_val_homology.pkl not found next to this script")
 
 
 # ---- UniRef50 database (optional) ------------------------------------

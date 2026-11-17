@@ -21,22 +21,52 @@ non-effectors)**:
 
 | Method | TP | TN | FP | FN | Accuracy | Precision | Recall | F1 | MCC |
 |--------|----|----|----|----|----------|-----------|--------|----|-----|
-| **FungStructEff** | **43** | 143 | 17 | **10** | 87.3% | 0.717 | **0.811** | **0.761** | 0.678 |
-| PPEPFinder | 36 | **152** | **8** | 17 | 88.3% | **0.818** | 0.679 | 0.742 | 0.672 |
-| EffectorP 3.0 | 36 | 148 | 12 | 17 | 86.4% | 0.750 | 0.679 | 0.713 | 0.620 |
-| EffectorP-fungi 3.0 | 33 | **159** | **1** | 20 | **90.1%** | **0.971** | 0.623 | 0.759 | **0.726** |
+| **FungStructEff** | **48** | 121 | 39 | **5** | 79.3% | 0.552 | **0.906** | 0.686 | 0.582 |
+| PPEPFinder | 36 | 152 | 8 | 17 | 88.3% | 0.818 | 0.679 | 0.742 | 0.672 |
+| EffectorP 3.0 | 36 | 148 | 12 | 17 | 86.4% | 0.750 | 0.679 | 0.713 | 0.625 |
+| EffectorP-fungi 3.0 | 33 | **159** | **1** | 20 | **90.1%** | **0.971** | 0.623 | **0.759** | **0.728** |
 | DeepRedEff | 32 | 91 | 69 | 21 | 57.7% | 0.317 | 0.604 | 0.416 | 0.149 |
 
-- FungStructEff detects the **most true effectors (TP = 43)** — 7 more than
-  PPEPFinder and EffectorP 3.0.
-- It achieves the **highest recall (0.811)** and the **best F1 (0.761)**, with
-  **ROC-AUC = 0.8979**.
-- EffectorP-fungi 3.0 is the most conservative (FP = 1) but misses 20 effectors.
-- DeepRedEff performs poorly on this dataset (69 false positives).
+FungStructEff recovers **48 of 53 effectors (recall 0.906)**, 12 more than the
+next best method, at ROC-AUC **0.907**. It does so at a real cost: 39 false
+positives, so precision is 0.552 and MCC is **below EffectorP-fungi 3.0's
+0.728**. EffectorP-fungi 3.0 is far more conservative — 1 false positive — but
+misses 20 effectors. Which trade-off you want depends on what you are doing:
+FungStructEff is built for candidate generation, where a missed effector costs
+more than a wasted validation.
 
-FungStructEff is tuned for **recall** — the default threshold of 0.64 favours
-finding candidate effectors over minimising false positives, which suits
-discovery workflows. Raise `--threshold` if you need higher precision.
+Two things are worth knowing about those numbers:
+
+**The false positives are not noise.** Annotated by BLAST, most of the 39 are
+genuine members of effector-like families (hydrophobin, CFEM, SCP/TAPS,
+ribonuclease, cutinase, elicitin) carried by organisms that do not infect
+plants — saprotrophs, wood-decay and model fungi. One is a bacterial protein
+and one an oomycete, both curation errors in the benchmark's negative set. The
+model is recognising effector-like structure; the benchmark's negative label
+encodes host range, which structure alone does not carry.
+
+**Recall does not depend on similarity to the training data.** On the 22
+benchmark effectors with no detectable homologue anywhere in the training set,
+recall is **0.900 ± 0.019**, against 0.902 ± 0.008 over all 53 (10 replicate
+runs). This is the claim the method rests on, and it is measured rather than
+assumed.
+
+### Threshold
+
+The decision threshold is **0.18**, stored in the model bundle and applied by
+default. It was selected on a held-out validation partition — never on the
+benchmark or test data — where maximum F1 and maximum MCC independently chose
+the same operating point. `--threshold` overrides it, but only do that if you
+have your own validation data to select on; tuning the threshold on the data
+you then report is how optimistic numbers get published.
+
+### Reading these numbers honestly
+
+Internal test precision is 0.759, against 0.552 here. The gap is not
+overfitting: the internal split guarantees that no test protein has any
+homologue in training, a condition no real screening set satisfies. Treat the
+internal figures as an optimistic bound and the benchmark figures as the
+estimate for deployment.
 
 ## Pipeline
 
@@ -66,7 +96,7 @@ FungStructEff/
 │   ├── siamese.py              # contrastive network (needed to load the model)
 │   ├── merge.py
 │   └── features/               # residue, graph, struct, entropy, bio
-├── XGB_MODEL_v5_hardneg.pkl    # trained model bundle
+├── XGB_MODEL_v7_hardneg_val_homology.pkl   # trained model bundle
 ├── examples/Fung-14.pdb        # example structure (known effector)
 ├── requirements.txt
 ├── tools/                      # MMseqs2 binary      (gitignored)
@@ -217,10 +247,16 @@ python predict.py --pdb-dir alphafold_pdbs/ --outdir results/ \
 |---------------|-----------|----------------------------------------------------|
 | `--pdb-dir`   | (required)| Directory (or single file) of PDB/mmCIF structures |
 | `--outdir`    | `results` | Output directory                                   |
-| `--mmseqs-db` | none      | Path to the MMseqs2 UniRef50 DB prefix             |
+| `--mmseqs-db` | (required)| Path to the MMseqs2 UniRef50 DB prefix             |
 | `--threads`   | `8`       | Threads for MMseqs2                                |
-| `--threshold` | `0.64`     | Prediction threshold (high-recall default)        |
-| `--no-mmseqs` | off       | Skip MMseqs2; zero-fill entropy features           |
+| `--threshold` | bundle (`0.18`) | Override the stored operating point          |
+| `--no-mmseqs` | off       | Zero-fill conservation features — degraded, smoke tests only |
+
+`--mmseqs-db` is effectively required. The model was trained with conservation
+features, and running without them zero-fills 6 of the 1571 features: on this
+benchmark ROC-AUC falls from 0.907 to 0.886 and precision from 0.552 to 0.497.
+`predict.py` refuses to run unless you supply a database or pass `--no-mmseqs`
+explicitly, so a degraded run cannot happen by accident.
 
 ### Input structures
 
@@ -238,13 +274,16 @@ python predict.py --pdb-dir alphafold_pdbs/ --outdir results/ \
 | File | Contents |
 |------|----------|
 | `fungstructeff_predictions.csv` | `protein_id`, `probability`, `prediction`, `label` |
+| `run_manifest.json` | model version, threshold and its source, whether conservation features were computed, subsample seed |
 | `pdb_structures/` | normalized structures + `structure_manifest.tsv` |
 | `from_structures.fasta` | sequences extracted from the structures |
 | `cleaned_input.fasta` | sanitized sequences used downstream |
 | `sequence_extraction_notes.txt` | chain breaks, multi-chain, extraction warnings |
 
-The default threshold is **0.64**, matching the high-recall objective the model
-was tuned for. Override with `--threshold`.
+Every predictions file is written with a `run_manifest.json` beside it
+recording the model version, the threshold and where it came from, and whether
+conservation features were computed or zero-filled. A predictions file should
+never be separable from the settings that produced it.
 
 ---
 
