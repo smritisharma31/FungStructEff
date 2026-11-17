@@ -53,15 +53,41 @@ for mod, pipname in required.items():
         record(FAIL, f"import {mod}", f"missing — pip install {pipname} ({e})")
 
 
-# ---- scikit-learn pin (matches the pickled scaler) -------------------
+# ---- scikit-learn: only needed if the bundle lacks scaler arrays ------
+# A bundle processed by scripts/scaler_to_arrays.py carries the scaler as
+# plain numpy arrays, so inference applies (X - mean) / scale directly and
+# never unpickles a scikit-learn estimator. The version is then irrelevant.
+# Only a bundle still relying on the pickled object needs the 1.6.1 pin.
 try:
+    import pickle
+
     import sklearn
-    if sklearn.__version__ == "1.6.1":
+
+    # Resolved locally: `model_path` is not defined until later in this file.
+    _bundle = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                           "XGB_MODEL_v7_hardneg_val_homology.pkl")
+    uses_arrays = False
+    if os.path.exists(_bundle):
+        try:
+            from fungstructeff.siamese import Siamese
+            import __main__
+            __main__.Siamese = Siamese
+            with open(_bundle, "rb") as _fh:
+                _b = pickle.load(_fh)
+            uses_arrays = _b.get("scaler_mean") is not None
+            del _b
+        except Exception as _e:
+            record(WARN, "could not inspect bundle for scaler arrays", str(_e)[:80])
+
+    if uses_arrays:
+        record(PASS, "scaler stored as arrays",
+               f"scikit-learn {sklearn.__version__} not used at inference")
+    elif sklearn.__version__ == "1.6.1":
         record(PASS, "scikit-learn == 1.6.1", sklearn.__version__)
     else:
         record(WARN, "scikit-learn version",
-               f"{sklearn.__version__} (bundle pinned to 1.6.1; "
-               "mismatch may warn or alter scaling)")
+               f"{sklearn.__version__}; bundle still uses a pickled scaler fitted "
+               "under 1.6.1. Run scripts/scaler_to_arrays.py to drop the pin")
 except Exception:
     pass
 

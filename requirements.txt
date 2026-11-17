@@ -23,12 +23,24 @@
 
 fair-esm                    # ESM2-650M sequence embeddings (import esm)
 biopython                   # PDB/mmCIF parsing, DSSP interface, FASTA I/O
-scikit-learn==1.6.1         # pinned: matches the StandardScaler in the model bundle
+scikit-learn==1.6.1         # training only — see note below
 xgboost                     # final classifier
 scipy                       # conservation entropy statistics
 pandas
 numpy
 tqdm
+
+# ---------------------------------------------------------------------
+# scikit-learn is needed to TRAIN (StandardScaler is fitted during
+# training) but not to PREDICT. The released bundle stores the scaler as
+# plain numpy arrays, so predict.py applies (X - mean) / scale directly
+# and never unpickles a scikit-learn estimator. Inference therefore works
+# under any scikit-learn, or none at all.
+#
+# If you retrain, run scripts/scaler_to_arrays.py on the new bundle so it
+# carries the arrays too. Without them predict.py falls back to the
+# pickled scaler, which reintroduces the version coupling.
+# ---------------------------------------------------------------------
 
 # =====================================================================
 # External tools (NOT pip — see README for full instructions):

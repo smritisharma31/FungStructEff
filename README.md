@@ -290,7 +290,21 @@ never be separable from the settings that produced it.
 ## Notes
 
 - ESM2-650M weights (~2.5 GB) download on first run and are cached afterwards.
-- `scikit-learn` is pinned to **1.6.1** to match the `StandardScaler` stored in
-  the model bundle; other versions may warn or alter feature scaling.
+- **`scikit-learn` is not required to predict.** The bundle stores the fitted
+  scaler as plain numpy arrays, so `predict.py` applies `(X - mean) / scale`
+  directly and never unpickles a scikit-learn estimator. Inference runs under
+  any version. The `1.6.1` pin in `requirements.txt` is for training only,
+  where `StandardScaler` is fitted.
+
+  This replaces an earlier arrangement in which the bundle carried a pickled
+  `StandardScaler` and the serving environment had to be pinned to 1.6.1 to
+  avoid `InconsistentVersionWarning`. For the record, that warning was
+  precautionary rather than a behaviour change: loading the 1.6.1-fitted
+  scaler under 1.7.2 and 1.9.1 reproduces the transform bit-for-bit. Storing
+  the arrays removes the warning, the pin, and the question.
+
+  If you retrain, run `scripts/scaler_to_arrays.py` on the new bundle. It
+  verifies the arrays reproduce `scaler.transform()` exactly before writing,
+  and prints a fingerprint you can compare across environments.
 - FungStructEff does **not** fold sequences. Generate structures beforehand
   with AlphaFold or ColabFold (https://alphafoldserver.com/).

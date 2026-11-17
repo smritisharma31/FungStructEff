@@ -158,9 +158,25 @@ def main():
     # Load model
     bundle     = load_model(MODEL_PATH)
     model_cl   = bundle["model_cl"]
-    scaler     = bundle["scaler"]
+    scaler     = bundle.get("scaler")
     classifier = bundle["classifier"]
     model_cl.eval()
+
+    # Prefer the bundle's extracted scaler arrays over the pickled scikit-learn
+    # object; see the scaling step below for why.
+    scaler_mean  = bundle.get("scaler_mean")
+    scaler_scale = bundle.get("scaler_scale")
+    if scaler_mean is not None and scaler_scale is not None:
+        scaler_mean  = np.asarray(scaler_mean,  dtype=np.float64)
+        scaler_scale = np.asarray(scaler_scale, dtype=np.float64)
+        print(f"   Scaler   : arrays, {scaler_mean.shape[0]} features "
+              f"(fingerprint {bundle.get('scaler_fingerprint', 'n/a')}) — no sklearn needed")
+    elif scaler is not None:
+        scaler_mean = scaler_scale = None
+        print("   Scaler   : pickled sklearn object — version-sensitive; run "
+              "scripts/scaler_to_arrays.py")
+    else:
+        sys.exit("❌ Bundle has neither scaler arrays nor a scaler object.")
 
     # Decision threshold: the bundle's stored operating point unless the user
     # overrides it. The stored value was selected on the validation partition,
@@ -279,9 +295,25 @@ def main():
     print(f"{'='*55}")
     df_features = merge_all_features(df_graph, df_struct, df_entropy, df_bio, protein_ids)
 
-    # Scale structural features
-    X_struct    = np.nan_to_num(df_features[TRAINING_COLUMNS].values)
-    X_struct    = scaler.transform(X_struct)
+    # Scale structural features.
+    #
+    # A StandardScaler is just (X - mean) / scale over two fitted arrays. When
+    # the bundle carries those arrays we apply them directly, which keeps
+    # scikit-learn out of the inference path altogether: nothing here unpickles
+    # a scikit-learn object, so the serving environment's version cannot change
+    # the numbers and need not be pinned. scripts/scaler_to_arrays.py writes
+    # the arrays, having first proved they reproduce scaler.transform() exactly.
+    #
+    # Older bundles have only the pickled scaler, so that path still works.
+    X_struct = np.nan_to_num(df_features[TRAINING_COLUMNS].values)
+    if scaler_mean is not None:
+        if X_struct.shape[1] != scaler_mean.shape[0]:
+            print(f"\n[FATAL] Structural feature count {X_struct.shape[1]} does not match "
+                  f"the scaler's {scaler_mean.shape[0]}.")
+            sys.exit(1)
+        X_struct = (X_struct - scaler_mean) / scaler_scale
+    else:
+        X_struct = scaler.transform(X_struct)
     struct_cols = [f"struct_{i}" for i in range(X_struct.shape[1])]
 
     # Step 8: ESM2 embeddings
