@@ -154,11 +154,27 @@ def load_removed(path):
 
 
 def derive_removed(sets):
-    """Fallback: exact-match removals. Not equivalent to removed.tsv."""
+    """
+    Fallback: exact-match removals. Measured to be wrong, in two ways.
+
+    The authoritative list removes 89 negatives: 80 copies of benchmark
+    non-effectors, 1 copy of a benchmark effector (negative_7301 == Fung-24),
+    and 8 copies of training effectors. Positives are untouched, giving
+    407 + 5416.
+
+    Exact matching gets neither number right. It finds only 5 of the 8
+    effector duplicates, because 3 are the same protein without being
+    byte-identical: negative_5903 differs from seq_365 at one residue (99.8%),
+    negative_5342 is a 173 aa truncation of the 214 aa seq_486, and
+    negative_5650 contains seq_501. Homology clustering catches those; string
+    equality cannot. It then also drops the 5 positives it did match, which
+    training kept. Result: 5419 + 402 instead of 5416 + 407.
+    """
     print("\n⚠️  --derive: computing removals by exact sequence identity.")
-    print("    This finds duplicates and label conflicts but NOT the near-identical")
-    print("    homologues make_homology_split.py also excluded, so the result may")
-    print("    not match the data v7 was trained on. Reconcile before publishing.")
+    print("    This is known to be wrong. It finds 5 of the 8 training-effector")
+    print("    duplicates (3 are homologous, not identical) and wrongly drops the")
+    print("    5 positives it does match. Expect 5419 + 402 instead of the correct")
+    print("    5416 + 407. Use removed.tsv unless it is genuinely unrecoverable.")
     bench = {s for _, s in sets["benchmark"]}
     negseq, posseq = {}, {}
     for k, v in sets["negative"]:

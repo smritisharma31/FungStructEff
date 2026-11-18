@@ -41,6 +41,11 @@ BENCH = "fungi_additional_dataset.fasta"
 NEG = "fungi_negative_dataset.fasta"
 POS = "fungi_positive_dataset.fasta"
 
+# Frozen release composition — see check_datasets() for the derivation.
+EXPECT_NEG = 5416
+EXPECT_POS = 407
+EXPECT_BENCH = 213
+
 PASS, FAIL, WARN = "PASS", "FAIL", "WARN"
 results = []
 
@@ -161,6 +166,23 @@ def check_datasets():
     record(PASS, "dataset FASTA present",
            f"benchmark={len(bench)}  dev_neg={len(neg)}  dev_pos={len(pos)}")
 
+    # Frozen release composition. 5505 negative structures minus 89 removals:
+    # 80 copies of benchmark non-effectors, 1 copy of a benchmark effector
+    # (negative_7301 == Fung-24), and 8 copies of training effectors. Positives
+    # and the benchmark are untouched. These are exact counts, not a sanity
+    # range: the whole point of the audit was that the published data must be
+    # the data the model was trained on.
+    for label, got, want in (("negative", len(neg), EXPECT_NEG),
+                             ("positive", len(pos), EXPECT_POS),
+                             ("benchmark", len(bench), EXPECT_BENCH)):
+        if got == want:
+            record(PASS, f"{label} set size == {want}")
+        else:
+            record(FAIL, f"{label} set size == {want}",
+                   f"found {got} ({got - want:+d}). The released {label} set is "
+                   f"fixed at {want}; a different count means the regeneration "
+                   "did not use the same removal list as training.")
+
     # Duplicate IDs within a file.
     for label, entries in (("negative", neg), ("positive", pos), ("benchmark", bench)):
         ids = [i for i, _ in entries]
@@ -272,7 +294,17 @@ def main():
     ap.add_argument("--expect-threshold", type=float, default=0.18)
     ap.add_argument("--skip-bundle", action="store_true",
                     help="Skip bundle checks (e.g. on a machine without the model)")
+    ap.add_argument("--expect-neg", type=int, default=EXPECT_NEG,
+                    help=f"Expected development negative count (default {EXPECT_NEG})")
+    ap.add_argument("--expect-pos", type=int, default=EXPECT_POS,
+                    help=f"Expected development positive count (default {EXPECT_POS})")
+    ap.add_argument("--expect-bench", type=int, default=EXPECT_BENCH,
+                    help=f"Expected benchmark count (default {EXPECT_BENCH})")
     a = ap.parse_args()
+
+    globals()["EXPECT_NEG"] = a.expect_neg
+    globals()["EXPECT_POS"] = a.expect_pos
+    globals()["EXPECT_BENCH"] = a.expect_bench
 
     print(f"FungStructEff release verification\nrepo: {REPO}\n")
     print("-- model bundle " + "-" * 44)
