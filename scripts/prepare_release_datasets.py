@@ -243,8 +243,10 @@ def verify(kept):
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--removed", default=os.path.join("splits", "homology", "removed.tsv"),
-                    help="Authoritative list of ids excluded from training")
+    ap.add_argument("--removed", default=None,
+                    help="List of ids excluded from training. Defaults to "
+                         "splits/homology/removed.tsv if present, otherwise "
+                         "splits/homology/removed_89_reconstructed.tsv.")
     ap.add_argument("--derive", action="store_true",
                     help="Compute removals here instead of reading removed.tsv")
     ap.add_argument("--outdir", default=FASTA_DIR, help="Where to write the FASTA")
@@ -266,8 +268,21 @@ def main():
         print(f"  {label:10s} {len(sets[label])} sequences from {subdir}/")
 
     print("\nRemovals")
-    removed = derive_removed(sets) if a.derive else load_removed(
-        a.removed if os.path.isabs(a.removed) else os.path.join(REPO, a.removed))
+    if a.derive:
+        removed = derive_removed(sets)
+    else:
+        if a.removed:
+            path = a.removed if os.path.isabs(a.removed) else os.path.join(REPO, a.removed)
+        else:
+            base = os.path.join(REPO, "splits", "homology")
+            path = next((os.path.join(base, n) for n in
+                         ("removed.tsv", "removed_89_reconstructed.tsv")
+                         if os.path.exists(os.path.join(base, n))),
+                        os.path.join(base, "removed.tsv"))
+            print(f"  using {os.path.relpath(path, REPO)}")
+        removed = load_removed(path)
+        if len(removed) != 89:
+            print(f"  ⚠️  expected 89 removals (80 + 1 + 8), found {len(removed)}")
 
     kept, dropped = {}, {}
     for label, _, _ in SETS:

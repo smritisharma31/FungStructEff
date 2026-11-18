@@ -38,3 +38,6 @@ S_hepiali*
 fungi*
 filtered*
 seedsweep*
+
+# dataset backups written by scripts/prepare_release_datasets.py
+*.preaudit

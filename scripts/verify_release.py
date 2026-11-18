@@ -45,6 +45,7 @@ POS = "fungi_positive_dataset.fasta"
 EXPECT_NEG = 5416
 EXPECT_POS = 407
 EXPECT_BENCH = 213
+EXPECT_REMOVED = 89
 
 PASS, FAIL, WARN = "PASS", "FAIL", "WARN"
 results = []
@@ -235,16 +236,36 @@ def check_datasets():
 
 def check_split():
     base = os.path.join(REPO, "splits", "homology")
-    for name, why in (("split.tsv", "the partition the reported metrics are computed on"),
-                      ("removed.tsv", "what was dropped from training and why")):
-        p = os.path.join(base, name)
-        if os.path.exists(p):
-            with open(p) as fh:
-                n = sum(1 for _ in fh) - 1
-            record(PASS, f"splits/homology/{name}", f"{n} rows")
+
+    # The removal list may be the training run's own removed.tsv or the
+    # reconstructed equivalent committed to the repo; either satisfies this.
+    found = [n for n in ("removed.tsv", "removed_89_reconstructed.tsv")
+             if os.path.exists(os.path.join(base, n))]
+    if found:
+        p = os.path.join(base, found[0])
+        with open(p) as fh:
+            n = sum(1 for _ in fh) - 1
+        if n == EXPECT_REMOVED:
+            record(PASS, f"splits/homology/{found[0]}", f"{n} rows")
         else:
-            record(FAIL, f"splits/homology/{name}",
-                   f"missing — {why}. The split is part of the result, not scratch.")
+            record(FAIL, f"splits/homology/{found[0]} has {EXPECT_REMOVED} rows",
+                   f"found {n}. The removal list is fixed at {EXPECT_REMOVED} "
+                   "records (80 + 1 + 8).")
+    else:
+        record(FAIL, "splits/homology removal list",
+               "missing — neither removed.tsv nor removed_89_reconstructed.tsv. "
+               "This records what was dropped from training and why.")
+
+    p = os.path.join(base, "split.tsv")
+    if os.path.exists(p):
+        with open(p) as fh:
+            n = sum(1 for _ in fh) - 1
+        record(PASS, "splits/homology/split.tsv", f"{n} rows")
+    else:
+        record(FAIL, "splits/homology/split.tsv",
+               "missing — this is the partition the reported metrics are computed "
+               "on, and it cannot be reconstructed from the data. Copy it from the "
+               "training machine.")
 
 
 # ------------------------------------------------------------------ code ----

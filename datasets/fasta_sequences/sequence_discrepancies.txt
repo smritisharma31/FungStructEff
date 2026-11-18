@@ -1,0 +1,11 @@
+# structure-derived sequence differs from the pre-audit FASTA
+# set	id	old_len	structure_len
+negative	negative_1005	177	242
+negative	negative_2874	258	481
+negative	negative_3650	2122	2303
+negative	negative_4310	201	427
+negative	negative_775	270	308
+positive	seq_342	1461	1452
+positive	seq_354	545	544
+benchmark	Fung-44	170	169
+benchmark	Non-47	189	176
