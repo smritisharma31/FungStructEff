@@ -1,46 +1,80 @@
 # splits/homology
 
-## `removed_89_reconstructed.tsv`
+Produced by `make_homology_split.py` on 2026-10-15 (MMseqs2 `8cc5ce36`), with
+sequences read from the structures in `datasets/pdb_structures/` rather than
+from the FASTA files. `manifest.json` carries the full parameter set and
+`leakage_report.txt` the run's own narrative.
 
-The 89 development non-effector records excluded from v7 training, one row
-each, with the reason and the record each duplicates.
+Two linking rules, and the asymmetry between them matters:
 
-| Basis | Rows |
+| Purpose | Rule |
 |---|---|
-| `duplicate_of_benchmark_non_effector` | 80 |
-| `duplicate_of_benchmark_effector` (`negative_7301` == `Fung-24`) | 1 |
-| `duplicate_of_training_effector` | 8 |
+| Build homology components | E ≤ 0.001 |
+| Verify partitions | E ≤ 0.001 **or** identity ≥ 0.20 over ≥ 50% of the shorter sequence, any E |
 
-5505 development non-effector structures − 89 = **5416**. With the 407
-effectors, the released training set is **407 + 5416**. Positives and the
-213-protein benchmark are untouched.
+Verification is the looser rule, so two proteins can fall into different
+components and still violate the check once they sit in different partitions.
+Repairing that is where the partition drops come from.
 
-Sequences are taken from the structures in `datasets/pdb_structures/`, which is
-what the features were computed from, not from the pre-audit FASTA files.
+## Two sets of numbers, and they mean different things
 
-### Provenance, and why the name says "reconstructed"
+```
+input                     407 effectors   5505 non-effectors
+  - decontamination                     -   89          (81 benchmark duplicates + 8 label conflicts)
+cleaned development set   407 effectors   5416 non-effectors   = 5823
+  - partition drops        -  4           -   40          (44 identity-only, family members)
+partitioned set           403 effectors   5376 non-effectors   = 5779
+```
 
-81 of the 89 are recoverable mechanically: their sequence is an exact copy of a
-benchmark protein. The remaining 8 duplicate a *training* effector, and three
-of those are not byte-identical, so no exact-matching procedure finds them:
+**The released FASTAs hold the cleaned set, 407 + 5416.** The 89 are genuinely
+not data: the same protein was present twice, already in the benchmark or under
+a conflicting label. **`split.tsv` holds the partitioned set, 5779**, and is
+what records which proteins the model actually trained on.
 
-| Removed | Training effector | Relationship |
+The 44 are not contamination and are not errors. They are correctly labelled
+proteins dropped from validation and test because an identity-only homologue
+sat across a partition boundary and they belonged to a family that could not be
+relocated intact. Four of them are effectors. They stay in the dataset because
+a reader re-splitting the data differently should have them; `split.tsv` is
+what excludes them from this split.
+
+Report the training set as **4109 train / 845 validation / 825 test**
+(effectors 289 / 56 / 58), drawn from a cleaned development set of 5823.
+
+## `removed.tsv` — 133 rows
+
+| Reason | Rows | Identity |
 |---|---|---|
-| `negative_5903` (401 aa) | `seq_365` (401 aa) | one residue differs, 99.8% |
-| `negative_5342` (173 aa) | `seq_486` (214 aa) | truncation, 100% over its length |
-| `negative_5650` (342 aa) | `seq_501` (333 aa) | contains the positive, 100% |
+| duplicates an independent-benchmark protein | 81 | 1.000 |
+| label conflict (non-effector duplicating an effector) | 8 | 5 at 1.000, 2 at 1.000 over the shorter sequence, 1 at 0.997 |
+| validation/test drop, identity-only family member | 44 | 0.212 – 0.390 |
 
-Those eight ids come from the training run's own `removed.tsv`, produced by
-`scripts/make_homology_split.py` with homology clustering (E ≤ 1e-3, or ≥20%
-identity over ≥50% of the shorter sequence). This file reproduces that list and
-adds the partner and relationship for each row; it has not yet been diffed
-against the original. Do that when `removed.tsv` is to hand, and keep the
-original as the authority if they disagree.
+Decontamination used `--dup-id 0.95`, not exact string equality, which is why
+three of the eight label conflicts are not byte-identical: `negative_5903`
+differs from `seq_365` at one residue, `negative_5342` is a 173 aa truncation
+of the 214 aa `seq_486`, and `negative_5650` contains `seq_501`.
 
-## `split.tsv` — not yet committed
+**Do not reconstruct this file by sequence matching.** Exact matching finds 81
+of the 89 decontamination rows, misses those three, and cannot derive the 44
+partition drops at all. Anything consuming it must also separate the 89 from
+the 44 by the `reason` column — removing all 133 from the dataset would publish
+5372 non-effectors and describe the dataset as smaller than it is.
+`scripts/prepare_release_datasets.py` does this separation.
 
-The train/validation/test partition of the development set. It cannot be
-reconstructed from the data: single-linkage homology components depend on the
-all-against-all alignment, and the reported metrics are computed on these
-partitions. Copy it from the training machine. `scripts/verify_release.py`
-fails until it is here.
+## A caveat on `manifest.json`
+
+`input_fasta_sha256` records the hashes of the **pre-audit** FASTA files that
+the split consumed. The FASTAs in this repo have since been regenerated from
+the structures and carry the 89 removals, so those hashes will not match the
+committed files. The pre-audit versions are recoverable from git history. The
+`notes` at the top of `leakage_report.txt` list the sequences that differed
+between the old FASTAs and the structures, which is why the regeneration was
+done from the structures in the first place.
+
+## `benchmark_homology.tsv`
+
+Per-benchmark-protein homology against the cleaned development set. This is the
+source for the central claim: of the 53 benchmark effectors, 22 have no
+homologue anywhere in the development data and 22 have a homologue in the train
+partition. Benchmark proteins were never altered — duplicates were removed from
+the development side.

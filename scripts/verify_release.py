@@ -45,7 +45,12 @@ POS = "fungi_positive_dataset.fasta"
 EXPECT_NEG = 5416
 EXPECT_POS = 407
 EXPECT_BENCH = 213
-EXPECT_REMOVED = 89
+# removed.tsv holds 89 decontamination rows plus 44 validation/test proteins
+# dropped for identity-only cross-partition homology. Only the 89 leave the
+# dataset; the 44 are real data that split.tsv excludes from training.
+EXPECT_REMOVED = 133
+EXPECT_DECONTAMINATION = 89
+EXPECT_SPLIT_ROWS = 5779
 
 PASS, FAIL, WARN = "PASS", "FAIL", "WARN"
 results = []
@@ -239,28 +244,38 @@ def check_split():
 
     # The removal list may be the training run's own removed.tsv or the
     # reconstructed equivalent committed to the repo; either satisfies this.
-    found = [n for n in ("removed.tsv", "removed_89_reconstructed.tsv")
-             if os.path.exists(os.path.join(base, n))]
-    if found:
-        p = os.path.join(base, found[0])
+    p = os.path.join(base, "removed.tsv")
+    if os.path.exists(p):
         with open(p) as fh:
             n = sum(1 for _ in fh) - 1
         if n == EXPECT_REMOVED:
-            record(PASS, f"splits/homology/{found[0]}", f"{n} rows")
+            record(PASS, "splits/homology/removed.tsv",
+                   f"{n} rows = {EXPECT_DECONTAMINATION} decontamination + "
+                   f"{EXPECT_REMOVED - EXPECT_DECONTAMINATION} partition drops")
         else:
-            record(FAIL, f"splits/homology/{found[0]} has {EXPECT_REMOVED} rows",
-                   f"found {n}. The removal list is fixed at {EXPECT_REMOVED} "
-                   "records (80 + 1 + 8).")
+            record(FAIL, f"splits/homology/removed.tsv has {EXPECT_REMOVED} rows",
+                   f"found {n}. Expected {EXPECT_DECONTAMINATION} decontamination "
+                   f"rows plus {EXPECT_REMOVED - EXPECT_DECONTAMINATION} "
+                   "identity-only partition drops.")
     else:
-        record(FAIL, "splits/homology removal list",
-               "missing — neither removed.tsv nor removed_89_reconstructed.tsv. "
-               "This records what was dropped from training and why.")
+        record(FAIL, "splits/homology/removed.tsv",
+               "missing — this is make_homology_split.py's own record of what it "
+               "excluded and why. It exists on both ravi and aicob; copy it in. "
+               "Do not substitute a list reconstructed by sequence matching: 3 of "
+               "the 8 label conflicts are not byte-identical and 44 partition "
+               "drops cannot be derived at all.")
 
     p = os.path.join(base, "split.tsv")
     if os.path.exists(p):
         with open(p) as fh:
             n = sum(1 for _ in fh) - 1
-        record(PASS, "splits/homology/split.tsv", f"{n} rows")
+        if n == EXPECT_SPLIT_ROWS:
+            record(PASS, "splits/homology/split.tsv", f"{n} rows")
+        else:
+            record(FAIL, f"splits/homology/split.tsv has {EXPECT_SPLIT_ROWS} rows",
+                   f"found {n}. The partition the reported metrics are computed on "
+                   f"holds {EXPECT_SPLIT_ROWS} proteins "
+                   "(train 4109 / val 845 / test 825).")
     else:
         record(FAIL, "splits/homology/split.tsv",
                "missing — this is the partition the reported metrics are computed "

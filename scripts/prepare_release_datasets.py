@@ -125,12 +125,41 @@ def extract_from_structures(subdir):
     return entries
 
 
+DUP_ID = 0.95   # make_homology_split.py's --dup-id: the decontamination threshold
+
+
 def load_removed(path):
-    """Read removed.tsv tolerantly: a bare ID list, or a TSV with an ID column."""
+    """
+    Read removed.tsv and return only the records that must leave the DATASET.
+
+    removed.tsv holds two kinds of row and they must not be treated alike:
+
+      Decontamination (89 rows). Development proteins that duplicate a
+      benchmark protein (81) or carry a conflicting label (8). These are
+      genuinely not part of the dataset — the same protein was present twice,
+      once under the wrong label or already in the benchmark. They are removed
+      here.
+
+      Partition drops (44 rows). Validation/test proteins dropped because an
+      identity-only homologue sat across a partition boundary and they belonged
+      to a family that could not be relocated. These are a property of the
+      SPLIT, not of the data. The proteins are real, correctly labelled, and
+      belong in the released dataset; split.tsv is what records that the model
+      did not train on them.
+
+    Removing all 133 would publish 5372 non-effectors and misdescribe the
+    dataset as smaller than it is. Removing the 89 gives the cleaned
+    development set of 407 + 5416, with split.tsv selecting the 5779 used.
+
+    Rows are classified by the reason column where present, otherwise by
+    identity against DUP_ID. Both discriminate cleanly: the decontamination
+    rows sit at 1.000 (88) and 0.997 (1), the partition drops at 0.212-0.390.
+    """
     if not os.path.exists(path):
         sys.exit(f"❌ {path} not found.\n"
-                 "   This file is what make_homology_split.py excluded from training.\n"
-                 "   Copy it from the training machine, or use --derive (not equivalent).")
+                 "   This file is what make_homology_split.py excluded.\n"
+                 "   Copy it from the training machine, or use --derive "
+                 "(not equivalent).")
     with open(path, newline="") as fh:
         sample = fh.read(4096)
         fh.seek(0)
@@ -140,17 +169,50 @@ def load_removed(path):
         sys.exit(f"❌ {path} is empty.")
 
     header = [h.strip().lower() for h in rows[0]]
-    col, body = 0, rows
+    name = os.path.basename(path)
     if any(h in ID_COLUMNS for h in header):
         col = next(i for i, h in enumerate(header) if h in ID_COLUMNS)
         body = rows[1:]
-        print(f"  removed.tsv: using column '{rows[0][col]}' (of {len(header)})")
+        r_col = next((i for i, h in enumerate(header) if h in ("reason", "basis")), None)
+        i_col = next((i for i, h in enumerate(header)
+                      if h in ("identity", "pct_identity", "identity_pct")), None)
+        print(f"  {name}: id column '{rows[0][col]}'"
+              + (f", reason column '{rows[0][r_col]}'" if r_col is not None else "")
+              + (f", identity column '{rows[0][i_col]}'" if i_col is not None else ""))
     else:
-        print(f"  removed.tsv: no recognised header; using column 1")
+        col, body, r_col, i_col = 0, rows, None, None
+        print(f"  {name}: no recognised header; using column 1, no reason column")
 
-    ids = {r[col].strip() for r in body if r and r[col].strip()}
-    print(f"  removed.tsv: {len(ids)} ids to exclude")
-    return ids
+    def is_decontamination(r):
+        # Identity first: it is numeric and the two populations do not overlap
+        # (decontamination at 0.997-1.000, partition drops at 0.212-0.390),
+        # whereas reason wording is free text that could change.
+        if i_col is not None and i_col < len(r) and r[i_col].strip():
+            try:
+                return float(r[i_col]) >= DUP_ID
+            except ValueError:
+                pass
+        if r_col is not None and r_col < len(r) and r[r_col].strip():
+            reason = r[r_col].lower()
+            if "drop" in reason or "identity-only" in reason or "family" in reason:
+                return False
+            return "duplicat" in reason or "conflict" in reason
+        return True   # no way to tell: removing is the safe side for leakage
+
+    decon, drops = set(), set()
+    for r in body:
+        if not r or not r[col].strip():
+            continue
+        (decon if is_decontamination(r) else drops).add(r[col].strip())
+
+    print(f"  {name}: {len(decon) + len(drops)} rows -> "
+          f"{len(decon)} decontamination (removed from the dataset), "
+          f"{len(drops)} partition drops (kept; split.tsv excludes them)")
+    if r_col is None and i_col is None and len(decon) > 100:
+        print("  ⚠️  no reason or identity column, so every row was treated as a "
+              "removal.\n      If this file contains partition drops too, the "
+              "dataset will come out\n      smaller than the cleaned set.")
+    return decon
 
 
 def derive_removed(sets):
@@ -282,7 +344,8 @@ def main():
             print(f"  using {os.path.relpath(path, REPO)}")
         removed = load_removed(path)
         if len(removed) != 89:
-            print(f"  ⚠️  expected 89 removals (80 + 1 + 8), found {len(removed)}")
+            print(f"  ⚠️  expected 89 decontamination removals (81 benchmark "
+                  f"duplicates + 8 label conflicts), found {len(removed)}")
 
     kept, dropped = {}, {}
     for label, _, _ in SETS:
