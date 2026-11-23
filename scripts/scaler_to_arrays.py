@@ -48,6 +48,44 @@ import warnings
 import numpy as np
 
 
+def resolve_siamese():
+    """
+    Return a class pickle can rebuild the bundle's contrastive network into.
+
+    Training pickled the network from __main__, so unpickling needs *a* class
+    named Siamese in __main__. The real definition is preferred, but these two
+    scripts have to run on the training machine, which is exactly where the
+    fungstructeff package is not installed — the training log says so itself
+    ("fungstructeff package not importable").
+
+    A stub subclassing torch.nn.Module is sufficient and lossless here. Pickle
+    builds instances with object.__new__ without calling __init__,
+    nn.Module.__setstate__ restores parameters, buffers and submodules
+    verbatim, and re-pickling writes that same state back under the same
+    __main__.Siamese reference. The network is round-tripped untouched; only
+    the bundle's metadata is edited. predict.py still loads the result through
+    the real class.
+    """
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    try:
+        from fungstructeff.siamese import Siamese
+        return Siamese
+    except ImportError:
+        pass
+    try:
+        import torch.nn
+    except ImportError:
+        sys.exit("\u274c Cannot open the bundle: neither fungstructeff nor torch "
+                 "is importable.\n   Run this where the model was trained, or "
+                 "from the repo root.")
+    print("\u2139\ufe0f  fungstructeff not importable; using a stub for the "
+          "contrastive network.\n    It is round-tripped unchanged \u2014 only "
+          "metadata is edited.")
+    return type("Siamese", (torch.nn.Module,), {})
+
+
 def load_bundle(path):
     """Load a bundle, making Siamese importable the way training pickled it.
 
@@ -61,15 +99,8 @@ def load_bundle(path):
     Reading it off the object always yields None and would make this check
     silently vacuous.
     """
-    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    if here not in sys.path:
-        sys.path.insert(0, here)
-    try:
-        from fungstructeff.siamese import Siamese
-    except ImportError:
-        sys.exit("❌ Cannot import fungstructeff.siamese — run this from the repo root.")
     import __main__
-    __main__.Siamese = Siamese
+    __main__.Siamese = resolve_siamese()
 
     fitted_under = None
     with warnings.catch_warnings(record=True) as caught:
