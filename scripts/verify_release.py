@@ -35,7 +35,7 @@ import re
 import sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-BUNDLE = "XGB_MODEL_v7_hardneg_val_homology.pkl"
+BUNDLE = "XGB_MODEL_v8_hardneg_val_homology_thr-overall.pkl"
 FASTA_DIR = os.path.join("datasets", "fasta_sequences")
 BENCH = "fungi_additional_dataset.fasta"
 NEG = "fungi_negative_dataset.fasta"

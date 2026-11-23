@@ -65,7 +65,7 @@ try:
 
     # Resolved locally: `model_path` is not defined until later in this file.
     _bundle = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                           "XGB_MODEL_v7_hardneg_val_homology.pkl")
+                           "XGB_MODEL_v8_hardneg_val_homology_thr-overall.pkl")
     uses_arrays = False
     if os.path.exists(_bundle):
         try:
@@ -148,13 +148,13 @@ else:
 
 # ---- Model bundle ----------------------------------------------------
 here = os.path.dirname(os.path.abspath(__file__))
-model_path = os.path.join(here, "XGB_MODEL_v7_hardneg_val_homology.pkl")
+model_path = os.path.join(here, "XGB_MODEL_v8_hardneg_val_homology_thr-overall.pkl")
 if os.path.exists(model_path):
     record(PASS, "model bundle present",
            f"{os.path.basename(model_path)} ({os.path.getsize(model_path)/1e6:.1f} MB)")
 else:
     record(FAIL, "model bundle present",
-           "XGB_MODEL_v7_hardneg_val_homology.pkl not found next to this script")
+           "XGB_MODEL_v8_hardneg_val_homology_thr-overall.pkl not found next to this script")
 
 
 # ---- UniRef50 database (optional) ------------------------------------

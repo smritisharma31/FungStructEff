@@ -96,7 +96,7 @@ FungStructEff/
 │   ├── siamese.py              # contrastive network (needed to load the model)
 │   ├── merge.py
 │   └── features/               # residue, graph, struct, entropy, bio
-├── XGB_MODEL_v7_hardneg_val_homology.pkl   # trained model bundle
+├── XGB_MODEL_v8_hardneg_val_homology_thr-overall.pkl   # trained model bundle
 ├── examples/Fung-14.pdb        # example structure (known effector)
 ├── requirements.txt
 ├── tools/                      # MMseqs2 binary      (gitignored)

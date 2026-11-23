@@ -25,7 +25,7 @@ That is the environment the scaler was fitted in, so its unpickled arrays are
 authoritative by construction. Extracting there sidesteps the question of
 whether a newer scikit-learn unpickles the object faithfully.
 
-    python scripts/scaler_to_arrays.py XGB_MODEL_v7_hardneg_val_homology.pkl
+    python scripts/scaler_to_arrays.py XGB_MODEL_v8_hardneg_val_homology_thr-overall.pkl
 
 The script refuses to run under a version other than the one that fitted the
 scaler unless you pass --allow-version-mismatch, and it verifies the array

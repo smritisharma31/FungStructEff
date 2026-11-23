@@ -15,7 +15,7 @@ moves.
 
 Usage
 -----
-    python scripts/freeze_threshold.py XGB_MODEL_v7_hardneg_val_homology.pkl
+    python scripts/freeze_threshold.py XGB_MODEL_v8_hardneg_val_homology_thr-overall.pkl
 
     # write to a different file instead of in place
     python scripts/freeze_threshold.py in.pkl --out XGB_MODEL_v7_release.pkl
@@ -61,8 +61,13 @@ def main():
                     help="Write here instead of in place")
     ap.add_argument("--threshold", type=float, default=THRESHOLD,
                     help=f"Operating point to store (default {THRESHOLD})")
-    ap.add_argument("--rule", default=RULE,
-                    help="How the threshold was selected — stored as provenance")
+    ap.add_argument("--rule", default=None,
+                    help="How the threshold was selected, stored as provenance. "
+                         "Omitted, a rule already in the bundle is kept and only "
+                         "a bundle with no rule gets the built-in default. The "
+                         "training run records the real selection procedure, so "
+                         "overwriting it with a description written later loses "
+                         "provenance rather than adding it.")
     a = ap.parse_args()
 
     if not 0.0 < a.threshold < 1.0:
@@ -76,14 +81,29 @@ def main():
             sys.exit(f"❌ Bundle is missing '{key}' — is this a FungStructEff model?")
 
     old = bundle.get("threshold")
+    old_rule = bundle.get("threshold_rule")
     print(f"Bundle        : {a.bundle}")
     print(f"Version       : {bundle.get('version', 'unknown')}")
-    print(f"Threshold     : {old}  ->  {a.threshold}")
-    if bundle.get("threshold_rule"):
-        print(f"Previous rule : {bundle['threshold_rule']}")
+    if old is not None and abs(float(old) - a.threshold) < 1e-12:
+        print(f"Threshold     : {old}  (already correct, unchanged)")
+    else:
+        print(f"Threshold     : {old}  ->  {a.threshold}")
+
+    if a.rule is not None:
+        rule = a.rule
+        if old_rule and old_rule != rule:
+            print(f"Rule          : REPLACED\n  was: {old_rule}\n  now: {rule}")
+    elif old_rule:
+        rule = old_rule
+        print(f"Rule          : kept from the training run\n  {old_rule}")
+    else:
+        rule = RULE
+        print(f"Rule          : none stored, using default\n  {rule}")
+
+    print(f"Conservation  : {bundle.get('uses_conservation')}  ->  True")
 
     bundle["threshold"] = float(a.threshold)
-    bundle["threshold_rule"] = a.rule
+    bundle["threshold_rule"] = rule
     bundle["uses_conservation"] = True   # trained with MMseqs2 entropy features
 
     out = a.out or a.bundle

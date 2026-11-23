@@ -42,7 +42,7 @@ from fungstructeff.features.bio      import extract_bio_features
 from fungstructeff.merge             import merge_all_features, TRAINING_COLUMNS
 from fungstructeff.siamese           import Siamese
 
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "XGB_MODEL_v7_hardneg_val_homology.pkl")
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "XGB_MODEL_v8_hardneg_val_homology_thr-overall.pkl")
 ESM_LAYER  = 33
 
 
@@ -117,7 +117,7 @@ def load_model(model_path):
 
     if not os.path.exists(model_path):
         print(f"❌ Model not found: {model_path}")
-        print("   Make sure XGB_MODEL_v7_hardneg_val_homology.pkl is in the same "
+        print("   Make sure XGB_MODEL_v8_hardneg_val_homology_thr-overall.pkl is in the same "
               "directory as predict.py")
         sys.exit(1)
 
