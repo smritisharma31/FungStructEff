@@ -37,13 +37,31 @@ more than a wasted validation.
 
 Two things are worth knowing about those numbers:
 
-**The false positives are not noise.** Annotated by BLAST, most of the 39 are
-genuine members of effector-like families (hydrophobin, CFEM, SCP/TAPS,
-ribonuclease, cutinase, elicitin) carried by organisms that do not infect
-plants — saprotrophs, wood-decay and model fungi. One is a bacterial protein
-and one an oomycete, both curation errors in the benchmark's negative set. The
-model is recognising effector-like structure; the benchmark's negative label
-encodes host range, which structure alone does not carry.
+**What the false positives are.** All 39 were profiled with BLAST, InterPro,
+CATH and structure-based family search. **33 of 39 carry a signal peptide**, so
+the common property is secretion rather than any effector-specific fold:
+
+| | n | |
+|---|---|---|
+| Effector-type domain | 5 | RALPH-like ribonuclease, CFEM (85 aa), CAP/SCP, elicitin, class I hydrophobin |
+| Known enzyme | 13 | secreted peptidases, glycoside hydrolases, cutinases, chitin-binding modules |
+| No recognisable domain | 11 | median 96 aa, 7 of 11 secreted, no InterPro domain and no PDB hit |
+| Other, not clear-cut | 10 | |
+
+Only one (`Non-33`) matches a canonical effector family by structure search, and
+21 of 39 return no CATH fold at all. So these are not, for the most part,
+effectors in disguise: the 13 secreted enzymes have established non-effector
+functions and count as genuine errors. Two are curation problems in the
+benchmark's negative set — `Non-153` is a bacterial peptidoglycan endopeptidase
+(*Collimonas fungivorans*) and the highest-scoring false positive at 0.941, and
+`Non-12` is an oomycete elicitin.
+
+The 11 with no annotation are the interesting residue. Small, mostly secreted,
+and unannotated is also what an uncharacterised effector looks like, so they are
+neither confirmed errors nor confirmed effectors on present evidence.
+
+The honest summary: the model over-calls secreted proteins, and secretion is a
+necessary but not sufficient property of an effector.
 
 **Recall does not depend on similarity to the training data.** On the 22
 benchmark effectors with no detectable homologue anywhere in the training set,
