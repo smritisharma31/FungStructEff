@@ -86,7 +86,7 @@ def check_bundle(expect_threshold):
     if not os.path.exists(path):
         record(FAIL, f"{BUNDLE} present",
                "predict.py points at this file. Without it the repo does not run. "
-               "Copy the v7 bundle in (Git LFS or a release attachment if >100 MB).")
+               "Copy the release bundle in (Git LFS or a release attachment if >100 MB).")
         return
     size_mb = os.path.getsize(path) / 1e6
     record(PASS, f"{BUNDLE} present", f"{size_mb:.1f} MB")
@@ -305,9 +305,9 @@ def check_code():
         record(FAIL, "predict.py reads the threshold from the bundle")
 
     if BUNDLE in src:
-        record(PASS, "predict.py points at the v7 bundle")
+        record(PASS, "predict.py points at the release bundle")
     else:
-        record(FAIL, "predict.py points at the v7 bundle",
+        record(FAIL, "predict.py points at the release bundle",
                "MODEL_PATH does not reference " + BUNDLE)
 
     if "--no-mmseqs" in src and "uses_conservation" in src:
