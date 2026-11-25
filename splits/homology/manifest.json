@@ -1,0 +1,67 @@
+{
+  "script": "make_homology_split.py",
+  "created": "2026-10-15 05:12:52",
+  "runtime_s": 134.3,
+  "mmseqs_version": "8cc5ce367b5638c4306c2d7cfc652dd099a4643f",
+  "linking_rule": "E <= 0.001 OR identity >= 0.20 over >= 50% of the shorter sequence (any E)",
+  "parameters": {
+    "positive": "datasets/fasta_sequences/fungi_positive_dataset.fasta",
+    "negative": "datasets/fasta_sequences/fungi_negative_dataset.fasta",
+    "benchmark": "datasets/fasta_sequences/fungi_additional_dataset.fasta",
+    "structures": "datasets/pdb_structures",
+    "outdir": "/tmp/claude-0/-home-claude/055c12f9-bed6-5855-8171-e90711bdb73d/scratchpad/leak/release/splits/run_a",
+    "threads": 2,
+    "sensitivity": 7.5,
+    "evalue": 0.001,
+    "min_id": 0.0,
+    "min_cov": 0.0,
+    "id_link": 0.2,
+    "id_link_cov": 0.5,
+    "report_evalue": 10.0,
+    "dup_id": 0.95,
+    "fractions": [
+      0.7,
+      0.15,
+      0.15
+    ],
+    "seed": 42,
+    "max_repair_passes": 10,
+    "keep_tmp": false
+  },
+  "input_fasta_sha256": {
+    "datasets/fasta_sequences/fungi_positive_dataset.fasta": "da615266aa4f0d3ce9dc6fb491db5ebf88353a6300ec7962f63e4322cec166d6",
+    "datasets/fasta_sequences/fungi_negative_dataset.fasta": "4bc53018700fdb7fdd22ad31d06951bc0ea1c59d14a22da662bae9ad264cb3c7",
+    "datasets/fasta_sequences/fungi_additional_dataset.fasta": "09e2fc4d13e0863a5551a9f928cd3818f631f098f3c4195f705ea8ff762e8a68"
+  },
+  "counts": {
+    "input": {
+      "effectors": 407,
+      "non_effectors": 5505,
+      "benchmark": 213
+    },
+    "removed": {
+      "label_conflicts": 8,
+      "benchmark_duplicates": 81
+    },
+    "partitions": {
+      "train": {
+        "effectors": 289,
+        "non_effectors": 3820
+      },
+      "val": {
+        "effectors": 56,
+        "non_effectors": 789
+      },
+      "test": {
+        "effectors": 58,
+        "non_effectors": 767
+      }
+    },
+    "components": 2294,
+    "largest_component": 1591,
+    "moved_in_repair": 22,
+    "relocated_identity_only": 13,
+    "dropped_identity_only": 44
+  },
+  "verification_pass": true
+}

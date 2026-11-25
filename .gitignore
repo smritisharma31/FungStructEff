@@ -41,3 +41,7 @@ seedsweep*
 
 # dataset backups written by scripts/prepare_release_datasets.py
 *.preaudit
+
+# inference outputs
+results/
+__pycache__/

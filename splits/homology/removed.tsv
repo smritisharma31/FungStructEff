@@ -1,0 +1,134 @@
+protein_id	source	reason	matched_id	identity
+negative_1058	negative	duplicates an independent-benchmark protein	Non-107	1.000
+negative_1278	negative	duplicates an independent-benchmark protein	Non-157	1.000
+negative_1389	negative	duplicates an independent-benchmark protein	Non-28	1.000
+negative_1490	negative	duplicates an independent-benchmark protein	Non-60	1.000
+negative_1497	negative	duplicates an independent-benchmark protein	Non-113	1.000
+negative_1530	negative	duplicates an independent-benchmark protein	Non-141	1.000
+negative_1577	negative	duplicates an independent-benchmark protein	Non-36	1.000
+negative_1585	negative	duplicates an independent-benchmark protein	Non-76	1.000
+negative_1693	negative	duplicates an independent-benchmark protein	Non-124	1.000
+negative_1719	negative	duplicates an independent-benchmark protein	Non-81	1.000
+negative_1746	negative	duplicates an independent-benchmark protein	Non-146	1.000
+negative_200	negative	duplicates an independent-benchmark protein	Non-139	1.000
+negative_2054	negative	duplicates an independent-benchmark protein	Non-108	1.000
+negative_2169	negative	duplicates an independent-benchmark protein	Non-112	1.000
+negative_2195	negative	duplicates an independent-benchmark protein	Non-58	1.000
+negative_2278	negative	duplicates an independent-benchmark protein	Non-62	1.000
+negative_2343	negative	duplicates an independent-benchmark protein	Non-51	1.000
+negative_2392	negative	duplicates an independent-benchmark protein	Non-101	1.000
+negative_2458	negative	duplicates an independent-benchmark protein	Non-138	1.000
+negative_2500	negative	duplicates an independent-benchmark protein	Non-162	1.000
+negative_2533	negative	duplicates an independent-benchmark protein	Non-33	1.000
+negative_2618	negative	duplicates an independent-benchmark protein	Non-57	1.000
+negative_2625	negative	duplicates an independent-benchmark protein	Non-129	1.000
+negative_2932	negative	duplicates an independent-benchmark protein	Non-11	1.000
+negative_2997	negative	duplicates an independent-benchmark protein	Non-75	1.000
+negative_3137	negative	duplicates an independent-benchmark protein	Non-8	1.000
+negative_3158	negative	duplicates an independent-benchmark protein	Non-140	1.000
+negative_3163	negative	duplicates an independent-benchmark protein	Non-148	1.000
+negative_3225	negative	duplicates an independent-benchmark protein	Non-98	1.000
+negative_3372	negative	duplicates an independent-benchmark protein	Non-102	1.000
+negative_3386	negative	duplicates an independent-benchmark protein	Non-119	1.000
+negative_3462	negative	duplicates an independent-benchmark protein	Non-25	1.000
+negative_3540	negative	duplicates an independent-benchmark protein	Non-19	1.000
+negative_3541	negative	duplicates an independent-benchmark protein	Non-66	1.000
+negative_3651	negative	duplicates an independent-benchmark protein	Non-149	1.000
+negative_3726	negative	duplicates an independent-benchmark protein	Non-7	1.000
+negative_3731	negative	duplicates an independent-benchmark protein	Non-136	1.000
+negative_3760	negative	duplicates an independent-benchmark protein	Non-71	1.000
+negative_3802	negative	duplicates an independent-benchmark protein	Non-137	1.000
+negative_3884	negative	duplicates an independent-benchmark protein	Non-77	1.000
+negative_3900	negative	duplicates an independent-benchmark protein	Non-52	1.000
+negative_3907	negative	duplicates an independent-benchmark protein	Non-142	1.000
+negative_3961	negative	duplicates an independent-benchmark protein	Non-100	1.000
+negative_407	negative	duplicates an independent-benchmark protein	Non-97	1.000
+negative_4079	negative	duplicates an independent-benchmark protein	Non-20	1.000
+negative_4091	negative	duplicates an independent-benchmark protein	Non-68	1.000
+negative_412	negative	duplicates an independent-benchmark protein	Non-144	1.000
+negative_4252	negative	duplicates an independent-benchmark protein	Non-45	1.000
+negative_4381	negative	duplicates an independent-benchmark protein	Non-135	1.000
+negative_4493	negative	duplicates an independent-benchmark protein	Non-70	1.000
+negative_4574	negative	duplicates an independent-benchmark protein	Non-2	1.000
+negative_4596	negative	duplicates an independent-benchmark protein	Non-90	1.000
+negative_464	negative	duplicates an independent-benchmark protein	Non-30	1.000
+negative_4722	negative	duplicates an independent-benchmark protein	Non-89	1.000
+negative_4827	negative	duplicates an independent-benchmark protein	Non-104	1.000
+negative_492	negative	duplicates an independent-benchmark protein	Non-69	1.000
+negative_4975	negative	duplicates an independent-benchmark protein	Non-63	1.000
+negative_4982	negative	duplicates an independent-benchmark protein	Non-50	1.000
+negative_5081	negative	duplicates an independent-benchmark protein	Non-49	1.000
+negative_5342	negative	non-effector duplicates a development effector	seq_486	1.000
+negative_5344	negative	non-effector duplicates a development effector	seq_494	1.000
+negative_5371	negative	non-effector duplicates a development effector	seq_101	1.000
+negative_5582	negative	non-effector duplicates a development effector	seq_123	1.000
+negative_5637	negative	duplicates an independent-benchmark protein	Non-48	1.000
+negative_5642	negative	duplicates an independent-benchmark protein	Non-24	1.000
+negative_5650	negative	non-effector duplicates a development effector	seq_501	1.000
+negative_5762	negative	duplicates an independent-benchmark protein	Non-64	1.000
+negative_5903	negative	non-effector duplicates a development effector	seq_365	0.997
+negative_6074	negative	duplicates an independent-benchmark protein	Non-111	1.000
+negative_6105	negative	non-effector duplicates a development effector	seq_214	1.000
+negative_616	negative	duplicates an independent-benchmark protein	Non-17	1.000
+negative_6228	negative	duplicates an independent-benchmark protein	Non-61	1.000
+negative_6349	negative	duplicates an independent-benchmark protein	Non-73	1.000
+negative_6491	negative	duplicates an independent-benchmark protein	Non-80	1.000
+negative_652	negative	duplicates an independent-benchmark protein	Non-127	1.000
+negative_6542	negative	duplicates an independent-benchmark protein	Non-26	1.000
+negative_6570	negative	duplicates an independent-benchmark protein	Non-159	1.000
+negative_6614	negative	duplicates an independent-benchmark protein	Non-37	1.000
+negative_67	negative	duplicates an independent-benchmark protein	Non-9	1.000
+negative_6806	negative	non-effector duplicates a development effector	seq_408	1.000
+negative_7068	negative	duplicates an independent-benchmark protein	Non-18	1.000
+negative_7301	negative	duplicates an independent-benchmark protein	Fung-24	1.000
+negative_738	negative	duplicates an independent-benchmark protein	Non-56	1.000
+negative_74	negative	duplicates an independent-benchmark protein	Non-145	1.000
+negative_809	negative	duplicates an independent-benchmark protein	Non-133	1.000
+negative_869	negative	duplicates an independent-benchmark protein	Non-31	1.000
+negative_91	negative	duplicates an independent-benchmark protein	Non-132	1.000
+negative_913	negative	duplicates an independent-benchmark protein	Non-23	1.000
+negative_936	negative	duplicates an independent-benchmark protein	Non-123	1.000
+negative_1306	negative	identity 0.25 over 52% of the shorter sequence with train protein (E = 0.68)	negative_2395	0.247
+negative_1399	negative	identity 0.22 over 73% of the shorter sequence with train protein (E = 2.2)	negative_542	0.220
+negative_1829	negative	identity 0.26 over 52% of the shorter sequence with train protein (E = 12)	negative_1732	0.258
+negative_1864	negative	identity 0.31 over 53% of the shorter sequence with train protein (E = 0.023)	negative_1595	0.306
+negative_1964	negative	identity 0.26 over 73% of the shorter sequence with train protein (E = 3)	negative_2472	0.258
+negative_2020	negative	identity 0.23 over 52% of the shorter sequence with train protein (E = 0.7)	negative_5339	0.233
+negative_2203	negative	identity 0.21 over 72% of the shorter sequence with train protein (E = 2.4)	negative_2858	0.212
+negative_2242	negative	identity 0.27 over 64% of the shorter sequence with val protein (E = 1.5)	negative_5302	0.271
+negative_2274	negative	identity 0.28 over 65% of the shorter sequence with train protein (E = 24)	seq_026	0.283
+negative_2568	negative	identity 0.28 over 53% of the shorter sequence with train protein (E = 11)	negative_838	0.283
+negative_2595	negative	identity 0.27 over 63% of the shorter sequence with train protein (E = 1.6)	negative_2719	0.271
+negative_2620	negative	identity 0.27 over 60% of the shorter sequence with val protein (E = 5)	negative_1318	0.273
+negative_2667	negative	identity 0.28 over 87% of the shorter sequence with train protein (E = 0.25)	negative_6324	0.284
+negative_287	negative	identity 0.33 over 50% of the shorter sequence with train protein (E = 7.4)	seq_172	0.327
+negative_3056	negative	identity 0.32 over 53% of the shorter sequence with val protein (E = 2.5)	negative_5027	0.321
+negative_3157	negative	identity 0.23 over 61% of the shorter sequence with val protein (E = 0.035)	negative_643	0.228
+negative_3973	negative	identity 0.25 over 58% of the shorter sequence with train protein (E = 21)	negative_2937	0.252
+negative_4094	negative	identity 0.28 over 100% of the shorter sequence with train protein (E = 0.01)	negative_2480	0.282
+negative_4679	negative	identity 0.33 over 58% of the shorter sequence with train protein (E = 3.6)	negative_3674	0.333
+negative_4896	negative	identity 0.28 over 68% of the shorter sequence with train protein (E = 0.0086)	negative_1853	0.275
+negative_4989	negative	identity 0.23 over 54% of the shorter sequence with train protein (E = 96)	negative_5711	0.225
+negative_5119	negative	identity 0.23 over 52% of the shorter sequence with train protein (E = 20)	negative_402	0.227
+negative_5167	negative	identity 0.29 over 62% of the shorter sequence with train protein (E = 0.22)	negative_7035	0.288
+negative_5271	negative	identity 0.29 over 56% of the shorter sequence with train protein (E = 1.2)	negative_2544	0.293
+negative_5855	negative	identity 0.25 over 77% of the shorter sequence with train protein (E = 0.39)	negative_1640	0.250
+negative_6196	negative	identity 0.30 over 67% of the shorter sequence with train protein (E = 0.023)	negative_341	0.297
+negative_6293	negative	identity 0.26 over 59% of the shorter sequence with train protein (E = 0.6)	negative_6168	0.264
+negative_6430	negative	identity 0.24 over 53% of the shorter sequence with train protein (E = 0.32)	negative_2237	0.237
+negative_6454	negative	identity 0.31 over 56% of the shorter sequence with train protein (E = 0.041)	negative_1453	0.306
+negative_6504	negative	identity 0.21 over 55% of the shorter sequence with train protein (E = 6.7)	negative_5258	0.214
+negative_6553	negative	identity 0.39 over 55% of the shorter sequence with train protein (E = 14)	negative_334	0.390
+negative_658	negative	identity 0.24 over 58% of the shorter sequence with train protein (E = 21)	negative_273	0.241
+negative_6624	negative	identity 0.23 over 51% of the shorter sequence with val protein (E = 12)	negative_2070	0.225
+negative_6792	negative	identity 0.27 over 67% of the shorter sequence with train protein (E = 2.6)	negative_1963	0.267
+negative_6877	negative	identity 0.27 over 52% of the shorter sequence with train protein (E = 2.5)	negative_6574	0.265
+negative_7296	negative	identity 0.28 over 55% of the shorter sequence with train protein (E = 0.0054)	seq_544	0.281
+negative_800	negative	identity 0.26 over 55% of the shorter sequence with train protein (E = 34)	negative_4080	0.256
+negative_916	negative	identity 0.30 over 60% of the shorter sequence with train protein (E = 4.7)	negative_4808	0.305
+negative_934	negative	identity 0.34 over 54% of the shorter sequence with train protein (E = 15)	seq_112	0.344
+negative_953	negative	identity 0.28 over 71% of the shorter sequence with train protein (E = 0.019)	negative_3124	0.275
+seq_349	positive	identity 0.21 over 53% of the shorter sequence with train protein (E = 7.9)	negative_2340	0.212
+seq_361	positive	identity 0.22 over 81% of the shorter sequence with train protein (E = 25)	negative_393	0.216
+seq_451	positive	identity 0.33 over 61% of the shorter sequence with train protein (E = 2.2)	negative_3546	0.327
+seq_515	positive	identity 0.23 over 62% of the shorter sequence with val protein (E = 1.4)	negative_5463	0.230

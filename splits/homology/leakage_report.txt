@@ -1,0 +1,41 @@
+FungStructEff leakage-controlled split
+MMseqs2 8cc5ce367b5638c4306c2d7cfc652dd099a4643f
+  components built from significant homology: E <= 0.001
+  partitions verified against: E <= 0.001 OR identity >= 0.20 over >= 50% of the shorter sequence (any E)
+Input: 407 effectors, 5505 non-effectors, 213 benchmark proteins (sequences from PDB structures)
+  note: positive: 1 FASTA sequences differ from the structure ['seq_354']
+  note: fungi_negative_dataset.fasta repeats IDs ['negative_4310']
+  note: negative: 5 FASTA sequences differ from the structure ['negative_1005', 'negative_2874', 'negative_3650', 'negative_4310', 'negative_775']
+  note: additional: 2 FASTA sequences differ from the structure ['Fung-44', 'Non-47']
+
+[1] Decontamination
+  non-effectors duplicating an effector (label conflicts) removed: 8
+  development proteins duplicating a benchmark protein removed:   81
+  removed by source: {'negative': 89}
+  cleaned development set: 5823 proteins (407 effectors, 5416 non-effectors)
+
+[2] Homology components (single linkage)
+  linked pairs: 63576; components: 2294; singletons: 1828
+  largest components: [1591, 107, 101, 68, 47] (largest holds 27.3% of proteins, 75 effectors)
+
+[3] Verification: exhaustive Smith-Waterman searches between partitions
+  pass 1: 66 cross-partition pairs violate the rules (4 significant, 62 identity-only)
+  pass 2: 0 cross-partition pairs violate the rules (0 significant, 0 identity-only)
+  proteins moved with their component (significant homology): 22
+  singleton proteins relocated next to their partner (identity-only): 13
+  validation/test proteins dropped (identity-only, member of a family): 44 (4 effectors)
+  RESULT: PASS - no cross-partition pair violates either rule
+    val  vs train: smallest E-value of any alignment 0.001; no alignment covers >= 50% of the shorter sequence
+    test vs train: smallest E-value of any alignment 0.0016; no alignment covers >= 50% of the shorter sequence
+    test vs val  : smallest E-value of any alignment 0.0011; no alignment covers >= 50% of the shorter sequence
+
+[4] Final partitions
+  train:  4109 proteins (71.1%)  effectors  289  non-effectors  3820  (effector share 7.0%)
+  val  :   845 proteins (14.6%)  effectors   56  non-effectors   789  (effector share 6.6%)
+  test :   825 proteins (14.3%)  effectors   58  non-effectors   767  (effector share 7.0%)
+  total retained: 5779 proteins
+
+[5] Independent benchmark vs the cleaned development set (exhaustive search)
+  effectors (n = 53): no homologue 22; <40% 9; 40-95% 22; >=95% 0  | homologue in TRAIN partition: 22
+  non-effectors (n = 160): no homologue 67; <40% 40; 40-95% 53; >=95% 0  | homologue in TRAIN partition: 70
+  (benchmark proteins are never altered; duplicates were removed from the development side)
